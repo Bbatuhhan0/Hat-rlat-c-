@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
+import '../pages/map_picker_screen.dart';
 
 class AddTaskSheet extends StatefulWidget {
   const AddTaskSheet({super.key});
@@ -23,6 +24,10 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   TimeOfDay _singleTime = TimeOfDay.now();
   Color _selectedColor = Colors.blue;
 
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+  String? _selectedLocationName;
+
   final List<Color> _colors = [
     Colors.blue,
     Colors.red,
@@ -31,6 +36,26 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     Colors.purple,
     Colors.teal,
   ];
+
+  Future<void> _selectLocation(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerScreen(
+          initialLatitude: _selectedLatitude,
+          initialLongitude: _selectedLongitude,
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _selectedLatitude = result['latitude'];
+        _selectedLongitude = result['longitude'];
+        _selectedLocationName = result['address'];
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +294,50 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
           const SizedBox(height: 16),
 
+          // Location Selection
+          GestureDetector(
+            onTap: () => _selectLocation(context),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: inputColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    size: 20,
+                    color: Colors.redAccent,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _selectedLocationName ?? 'Konum Ekle (Opsiyonel)',
+                      style: TextStyle(color: textColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (_selectedLatitude != null)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _selectedLatitude = null;
+                          _selectedLongitude = null;
+                          _selectedLocationName = null;
+                        });
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Color Selection
           SizedBox(
             height: 40,
@@ -328,6 +397,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                 category: 'Genel',
                 isBulk: _isBulkMode,
                 repetitionType: _isBulkMode ? _selectedRepetition : 'none',
+                latitude: _selectedLatitude,
+                longitude: _selectedLongitude,
+                radius: 1000.0,
               );
 
               Navigator.pop(context);

@@ -137,7 +137,6 @@ class WeeklyChart extends StatelessWidget {
                           sideTitles: SideTitles(showTitles: false),
                         ),
                       ),
-                      borderData: FlBorderData(show: false),
                       gridData: const FlGridData(show: false),
                       barGroups: barGroups,
                     ),

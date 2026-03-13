@@ -9,6 +9,9 @@ class Task {
   final bool isCompleted;
   final int? colorValue;
   final bool isBulk; // New field
+  final double? latitude;
+  final double? longitude;
+  final double? radius;
 
   // Compatibility fields
   final String category;
@@ -29,6 +32,9 @@ class Task {
     this.streakCount = 0,
     this.currentCount = 0,
     this.targetCount = 1,
+    this.latitude,
+    this.longitude,
+    this.radius = 1000.0,
   });
 
   // Derived property for UI
@@ -64,6 +70,9 @@ class Task {
     int? streakCount,
     int? currentCount,
     int? targetCount,
+    double? latitude,
+    double? longitude,
+    double? radius,
   }) {
     return Task(
       id: id ?? this.id,
@@ -78,6 +87,9 @@ class Task {
       streakCount: streakCount ?? this.streakCount,
       currentCount: currentCount ?? this.currentCount,
       targetCount: targetCount ?? this.targetCount,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      radius: radius ?? this.radius,
     );
   }
 
@@ -95,6 +107,9 @@ class Task {
       'streakCount': streakCount,
       'currentCount': currentCount,
       'targetCount': targetCount,
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius': radius,
     };
   }
 
@@ -112,6 +127,15 @@ class Task {
       streakCount: map['streakCount'] ?? 0,
       currentCount: map['currentCount'] ?? 0,
       targetCount: map['targetCount'] ?? 1,
+      latitude: map['latitude'] != null
+          ? (map['latitude'] as num).toDouble()
+          : null,
+      longitude: map['longitude'] != null
+          ? (map['longitude'] as num).toDouble()
+          : null,
+      radius: map['radius'] != null
+          ? (map['radius'] as num).toDouble()
+          : 1000.0,
     );
   }
 

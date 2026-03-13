@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Konum bazlı hatırlatıcılar için konum erişimi gerekmektedir.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Uygulama arka plandayken hedef konumunuza ulaştığınızda bildirim alabilmek için konum erişimi gerekmektedir.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Hedef konumlarınızı tespit edebilmek için sürekli konum takibine ihtiyaç vardır.</string>
 </dict>
 </plist>

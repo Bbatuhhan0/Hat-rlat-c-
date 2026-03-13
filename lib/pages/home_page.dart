@@ -8,6 +8,7 @@ import '../widgets/add_task_sheet.dart';
 import '../widgets/date_timeline.dart';
 import '../widgets/daily_progress_card.dart';
 import 'stats_page.dart';
+import 'manage_goals_page.dart';
 import 'package:lottie/lottie.dart';
 
 class HomePage extends StatefulWidget {
@@ -216,6 +217,22 @@ class _HomePageState extends State<HomePage> {
             currentAccountPicture: const CircleAvatar(
               child: Icon(Icons.person),
             ),
+          ),
+          ListTile(
+            leading: const Icon(CupertinoIcons.list_bullet),
+            title: Text(
+              'Hedefleri Yönet',
+              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+            ),
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+              Navigator.push(
+                context,
+                CupertinoPageRoute(
+                  builder: (context) => const ManageGoalsPage(),
+                ),
+              );
+            },
           ),
           ListTile(
             title: Text(
