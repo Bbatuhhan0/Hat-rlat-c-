@@ -12,6 +12,7 @@ import 'manage_goals_page.dart';
 import 'settings_page.dart';
 import 'package:lottie/lottie.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:ui';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +24,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showCelebration = false;
+  bool _isSheetOpen = false;
 
   @override
   void initState() {
@@ -87,9 +89,20 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(isDarkMode),
-      body: CupertinoTabScaffold(
+      backgroundColor: Colors.transparent,
+      body: AnimatedScale(
+        scale: _isSheetOpen ? 0.95 : 1.0,
+        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 300),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          foregroundDecoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: _isSheetOpen ? 0.4 : 0.0),
+          ),
+          child: CupertinoTabScaffold(
+            backgroundColor: Colors.transparent,
         tabBar: CupertinoTabBar(
-          backgroundColor: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
+          backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
           activeColor: CupertinoColors.systemBlue,
           inactiveColor: CupertinoColors.systemGrey,
           items: const [
@@ -106,11 +119,28 @@ class _HomePageState extends State<HomePage> {
         tabBuilder: (context, index) {
           if (index == 0) {
             return CupertinoPageScaffold(
-              backgroundColor: isDarkMode
-                  ? Colors.black
-                  : CupertinoColors.systemGroupedBackground,
+              backgroundColor: Colors.transparent,
               child: Stack(
                 children: [
+                  // Blob Background for depth
+                  Positioned(
+                    top: 150,
+                    left: MediaQuery.of(context).size.width / 2 - 150,
+                    child: Container(
+                      width: 300,
+                      height: 300,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8E2DE2).withValues(alpha: 0.3),
+                            blurRadius: 100,
+                            spreadRadius: 30,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   // Main List
                   _buildTaskView(isDarkMode),
 
@@ -120,8 +150,9 @@ class _HomePageState extends State<HomePage> {
                     right: 20,
                     child: FloatingActionButton(
                       heroTag: 'addTask',
-                      onPressed: () {
-                        showModalBottomSheet(
+                      onPressed: () async {
+                        setState(() => _isSheetOpen = true);
+                        await showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: isDarkMode
@@ -134,6 +165,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           builder: (context) => const AddTaskSheet(),
                         );
+                        if (mounted) setState(() => _isSheetOpen = false);
                       },
                       child: const Icon(CupertinoIcons.add),
                     ),
@@ -155,57 +187,73 @@ class _HomePageState extends State<HomePage> {
             );
           } else {
             return CupertinoPageScaffold(
-              backgroundColor: isDarkMode
-                  ? Colors.black
-                  : CupertinoColors.systemGroupedBackground,
+              backgroundColor: Colors.transparent,
               child: const StatsPage(),
             );
           }
         },
       ),
-    );
+     ),
+    ),
+   );
   }
 
   Widget _buildTaskView(bool isDarkMode) {
     return CustomScrollView(
       slivers: [
+        SliverAppBar(
+          backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
+          pinned: true,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          expandedHeight: 60,
+          leading: IconButton(
+            icon: const Icon(Icons.menu, color: Colors.grey, size: 30),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: FlexibleSpaceBar(
+                centerTitle: true,
+                title: ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: isDarkMode 
+                        ? [const Color(0xFFE0E0E0), const Color(0xFFFFFFFF)] 
+                        : [const Color(0xFF333333), const Color(0xFF000000)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: const Text('Zaman Takip', style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.2,
+                    color: Colors.white,
+                  )),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                isDarkMode ? CupertinoIcons.sun_max : CupertinoIcons.moon_fill,
+                color: isDarkMode ? Colors.yellow : Colors.black,
+              ),
+              onPressed: () => context.read<TaskProvider>().toggleTheme(),
+            ),
+          ],
+        ),
         SliverToBoxAdapter(
           child: Column(
             children: [
-              const SizedBox(height: 50), // Safe Area equiv
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        color: Colors.grey,
-                        size: 30,
-                      ),
-                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        isDarkMode
-                            ? CupertinoIcons.sun_max
-                            : CupertinoIcons.moon_fill,
-                        color: isDarkMode ? Colors.yellow : Colors.black,
-                      ),
-                      onPressed: () =>
-                          context.read<TaskProvider>().toggleTheme(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              const DateTimeline(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 30),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: DailyProgressCard(),
               ),
+              const SizedBox(height: 30),
+              const DateTimeline(),
               const SizedBox(height: 20),
             ],
           ),
@@ -252,10 +300,24 @@ class _HomePageState extends State<HomePage> {
               return SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final task = tasks[index];
-                  return TaskItem(
-                    key: ValueKey(task.id), // Stable String Key
-                    task: task,
-                    onCompleted: _triggerCelebration,
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey('${task.id}_${provider.selectedDate.day}'),
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: Duration(milliseconds: 400 + (index * 50).clamp(0, 500)),
+                    curve: Curves.easeOutQuart,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 50 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: TaskItem(
+                      task: task,
+                      onCompleted: _triggerCelebration,
+                    ),
                   );
                 }, childCount: tasks.length),
               );

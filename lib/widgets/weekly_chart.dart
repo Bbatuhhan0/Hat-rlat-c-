@@ -1,9 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/task_provider.dart';
+import 'glass_card.dart';
 
 class WeeklyChart extends StatelessWidget {
   const WeeklyChart({super.key});
@@ -32,19 +32,13 @@ class WeeklyChart extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: count,
-                  color: (i == 0)
-                      ? CupertinoColors.systemBlue
-                      : CupertinoColors.systemBlue.withValues(alpha: 0.5),
+                  gradient: (i == 0)
+                      ? const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)], begin: Alignment.bottomCenter, end: Alignment.topCenter)
+                      : LinearGradient(colors: [const Color(0xFF8E2DE2).withValues(alpha: 0.4), const Color(0xFF4A00E0).withValues(alpha: 0.4)], begin: Alignment.bottomCenter, end: Alignment.topCenter),
                   width: 16,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(6),
-                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                   backDrawRodData: BackgroundBarChartRodData(
-                    show: true,
-                    toY: (maxCount < 5)
-                        ? 5
-                        : maxCount + 2, // dynamic background height
-                    color: isDarkMode ? Colors.white10 : Colors.grey[200],
+                    show: false,
                   ),
                 ),
               ],
@@ -54,20 +48,10 @@ class WeeklyChart extends StatelessWidget {
 
         return AspectRatio(
           aspectRatio: 1.5,
-          child: Container(
+          child: GlassCard(
+            isDarkMode: isDarkMode,
             margin: const EdgeInsets.all(20),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF2C2C2E) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -75,8 +59,9 @@ class WeeklyChart extends StatelessWidget {
                   'Son 7 Gün',
                   style: TextStyle(
                     color: isDarkMode ? Colors.white : Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 20),

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/task_provider.dart';
 import '../widgets/weekly_chart.dart';
+import '../widgets/glass_card.dart';
 
 class StatsPage extends StatelessWidget {
   const StatsPage({super.key});
@@ -11,22 +12,61 @@ class StatsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Consumer<TaskProvider>(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Positioned(
+            top: -50,
+            right: -50,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8E2DE2).withValues(alpha: 0.25),
+                    blurRadius: 100,
+                    spreadRadius: 30,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4A00E0).withValues(alpha: 0.25),
+                    blurRadius: 100,
+                    spreadRadius: 30,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Consumer<TaskProvider>(
                   builder: (context, provider, child) {
                     final isDarkMode = provider.isDarkMode;
                     return Text(
                       'Genel Başarı',
                       style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -1,
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.5,
                         color: isDarkMode ? Colors.white : Colors.black,
                       ),
                     );
@@ -37,41 +77,42 @@ class StatsPage extends StatelessWidget {
                   builder: (context, provider, _) {
                     final isDarkMode = provider.isDarkMode;
                     return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: CupertinoColors.systemGreen.withValues(
-                          alpha: 0.1,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: CupertinoColors.systemGreen.withValues(
-                            alpha: 0.3,
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'BU HAFTANIN YILDIZI',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: CupertinoColors.systemGreen,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'En verimli gün: ${provider.mostProductiveDay}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CupertinoColors.systemGreen.withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            spreadRadius: 2,
                           ),
                         ],
+                      ),
+                      child: GlassCard(
+                        isDarkMode: isDarkMode,
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'BU HAFTANIN YILDIZI',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: CupertinoColors.systemGreen,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'En verimli gün: ${provider.mostProductiveDay}',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -82,16 +123,24 @@ class StatsPage extends StatelessWidget {
                 const SizedBox(height: 30),
                 Consumer<TaskProvider>(
                   builder: (context, provider, _) {
-                    return _build30DayEfficiencyChart(
-                      provider.isDarkMode,
-                      provider,
+                    return GlassCard(
+                      isDarkMode: provider.isDarkMode,
+                      padding: const EdgeInsets.all(16),
+                      child: _build30DayEfficiencyChart(
+                        provider.isDarkMode,
+                        provider,
+                      ),
                     );
                   },
                 ),
                 const SizedBox(height: 30),
                 Consumer<TaskProvider>(
                   builder: (context, provider, _) {
-                    return _buildMonthlyPieChart(provider.isDarkMode, provider);
+                    return GlassCard(
+                      isDarkMode: provider.isDarkMode,
+                      padding: const EdgeInsets.all(16),
+                      child: _buildMonthlyPieChart(provider.isDarkMode, provider),
+                    );
                   },
                 ),
                 const SizedBox(height: 30),
@@ -123,38 +172,29 @@ class StatsPage extends StatelessWidget {
                         Text(
                           'En Çok Yapılanlar',
                           style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                             color: isDarkMode ? Colors.white : Colors.black,
                           ),
                         ),
                         const SizedBox(height: 15),
                         ...sortedEntries.map((entry) {
-                          return Container(
+                          return GlassCard(
+                            isDarkMode: isDarkMode,
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDarkMode
-                                  ? const Color(0xFF2C2C2E)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 36,
-                                  height: 36,
+                                  width: 40,
+                                  height: 40,
                                   decoration: BoxDecoration(
-                                    color: CupertinoColors.systemBlue
-                                        .withValues(alpha: 0.1),
+                                    gradient: const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)]),
                                     shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(color: const Color(0xFF8E2DE2).withValues(alpha: 0.3), blurRadius: 10, spreadRadius: 2),
+                                    ]
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
@@ -162,9 +202,9 @@ class StatsPage extends StatelessWidget {
                                         ? entry.key[0].toUpperCase()
                                         : '?',
                                     style: const TextStyle(
-                                      color: CupertinoColors.systemBlue,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 18,
                                     ),
                                   ),
                                 ),
@@ -172,8 +212,8 @@ class StatsPage extends StatelessWidget {
                                 Text(
                                   _capitalize(entry.key),
                                   style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                     color: isDarkMode
                                         ? Colors.white
                                         : Colors.black87,
@@ -183,11 +223,11 @@ class StatsPage extends StatelessWidget {
                                 Text(
                                   '${entry.value} kez',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 15,
                                     color: isDarkMode
                                         ? Colors.grey[400]
                                         : Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -202,7 +242,9 @@ class StatsPage extends StatelessWidget {
             ),
           ),
         ),
-      ),
+       ),
+      ],
+     ),
     );
   }
 
@@ -228,8 +270,9 @@ class StatsPage extends StatelessWidget {
         Text(
           '30 Günlük Verimlilik',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
             color: isDarkMode ? Colors.white : Colors.black,
           ),
         ),
@@ -249,13 +292,30 @@ class StatsPage extends StatelessWidget {
                 LineChartBarData(
                   spots: spots,
                   isCurved: true,
-                  color: CupertinoColors.systemBlue,
-                  barWidth: 3,
+                  color: const Color(0xFF4A00E0),
+                  barWidth: 4,
                   isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) {
+                      return FlDotCirclePainter(
+                        radius: 5,
+                        color: Colors.white,
+                        strokeWidth: 3,
+                        strokeColor: const Color(0xFF8E2DE2),
+                      );
+                    },
+                  ),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: CupertinoColors.systemBlue.withValues(alpha: 0.2),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF8E2DE2).withValues(alpha: 0.5),
+                        const Color(0xFF4A00E0).withValues(alpha: 0.0),
+                      ],
+                    )
                   ),
                 ),
               ],
@@ -288,8 +348,9 @@ class StatsPage extends StatelessWidget {
         Text(
           'Kategori Dağılımı (Son 30 Gün)',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
             color: isDarkMode ? Colors.white : Colors.black,
           ),
         ),

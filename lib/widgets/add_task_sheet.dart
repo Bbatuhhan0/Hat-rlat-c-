@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../models/saved_location.dart';
 import '../pages/map_picker_screen.dart';
+import 'package:lottie/lottie.dart';
 
 class AddTaskSheet extends StatefulWidget {
   const AddTaskSheet({super.key});
@@ -16,6 +17,29 @@ class AddTaskSheet extends StatefulWidget {
 class _AddTaskSheetState extends State<AddTaskSheet> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
+  
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  bool get _isFormValid {
+    if (_titleController.text.trim().isEmpty) return false;
+    if (_taskMode == 'location' && (_selectedLatitude == null || _selectedLongitude == null)) return false;
+    if (_taskMode == 'safe_exit' && _selectedSavedLocation == null) return false;
+    if (_taskMode == 'bulk' && _bulkTimes.isEmpty) return false;
+    return true;
+  }
 
   String _taskMode = 'single'; // 'single', 'bulk', 'location'
   String _selectedRepetition = 'monthly'; // 'monthly', 'yearly'
@@ -641,100 +665,160 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             const SizedBox(height: 24),
 
             // Add Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: _selectedColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                if (_titleController.text.isEmpty) return;
+            _PulseButtonWrapper(
+              animate: _isFormValid && !_isSaving,
+              color: _selectedColor,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _isSaving
+                    ? Container(
+                        key: const ValueKey('saving'),
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Lottie.network(
+                          'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json',
+                          width: 50,
+                          height: 50,
+                          repeat: false,
+                        ),
+                      )
+                    : ElevatedButton(
+                        key: const ValueKey('btn'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: _selectedColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (!_isFormValid) return;
+                          
+                          setState(() => _isSaving = true);
 
-                if (_taskMode == 'location') {
-                  if (_selectedLatitude == null || _selectedLongitude == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Konumlu hedef için lütfen bir konum seçin!',
+                          final List<String> times;
+                          if (_taskMode == 'bulk') {
+                            times = _bulkTimes.map((t) => '${t.hour}:${t.minute}').toList();
+                          } else if (_taskMode == 'location' || _taskMode == 'safe_exit') {
+                            times = ['00:00'];
+                          } else {
+                            times = ['${_singleTime.hour}:${_singleTime.minute}'];
+                          }
+
+                          Future.delayed(const Duration(milliseconds: 1500), () {
+                            if (!mounted) return;
+                            context.read<TaskProvider>().addTask(
+                              title: _titleController.text,
+                              date: _selectedDate,
+                              times: times,
+                              notes: _notesController.text,
+                              colorValue: _selectedColor.toARGB32(),
+                              category: _taskMode == 'safe_exit' ? 'Ayrılma Hatırlatıcısı' : 'Genel',
+                              isBulk: _taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode != 'single'),
+                              repetitionType: _taskMode == 'bulk'
+                                  ? _selectedRepetition
+                                  : (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine' ? 'daily' : 'none'),
+                              selectedWeekdays: (_taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine')) 
+                                  ? _selectedWeekdays.toList() 
+                                  : null,
+                              specificDates: (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'multiple')
+                                  ? _safeExitMultipleDates
+                                  : null,
+                              latitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.latitude : _selectedLatitude,
+                              longitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.longitude : _selectedLongitude,
+                              locationName: _taskMode == 'safe_exit' ? _selectedSavedLocation!.name : _selectedLocationName,
+                              startTime: _taskMode == 'safe_exit' 
+                                  ? '${_safeExitStartTime.hour.toString().padLeft(2, '0')}:${_safeExitStartTime.minute.toString().padLeft(2, '0')}' 
+                                  : null,
+                              endTime: _taskMode == 'safe_exit' 
+                                  ? '${_safeExitEndTime.hour.toString().padLeft(2, '0')}:${_safeExitEndTime.minute.toString().padLeft(2, '0')}' 
+                                  : null,
+                              radius: _taskMode == 'safe_exit' ? 100.0 : _selectedRadius,
+                              isLocationTask: _taskMode == 'location' || _taskMode == 'safe_exit',
+                              isSafeExitTask: _taskMode == 'safe_exit',
+                            );
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                             Text(
+                              'Hedef Ekle',
+                              style: TextStyle(color: Colors.white, fontSize: 16),
+                             ),
+                          ],
                         ),
                       ),
-                    );
-                    return;
-                  }
-                }
-
-                final List<String> times;
-                if (_taskMode == 'bulk') {
-                  if (_bulkTimes.isEmpty) return;
-                  times = _bulkTimes
-                      .map((t) => '${t.hour}:${t.minute}')
-                      .toList();
-                } else if (_taskMode == 'location' || _taskMode == 'safe_exit') {
-                  times = [
-                    '00:00',
-                  ]; // Konum veya Evden Çıkış hedefleri için saat geçersiz sayıyoruz.
-                } else {
-                  times = ['${_singleTime.hour}:${_singleTime.minute}'];
-                }
-
-                if (times.isEmpty) return;
-
-                if (_taskMode == 'safe_exit') {
-                  if (_selectedSavedLocation == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Lütfen listeden kayıtlı bir konum seçin!',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                }
-
-                context.read<TaskProvider>().addTask(
-                  title: _titleController.text,
-                  date: _selectedDate,
-                  times: times,
-                  notes: _notesController.text,
-                  colorValue: _selectedColor.toARGB32(),
-                  category: _taskMode == 'safe_exit' ? 'Ayrılma Hatırlatıcısı' : 'Genel',
-                  isBulk: _taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode != 'single'),
-                  repetitionType: _taskMode == 'bulk'
-                      ? _selectedRepetition
-                      : (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine' ? 'daily' : 'none'),
-                  selectedWeekdays: (_taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine')) 
-                      ? _selectedWeekdays.toList() 
-                      : null,
-                  specificDates: (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'multiple')
-                      ? _safeExitMultipleDates
-                      : null,
-                  latitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.latitude : _selectedLatitude,
-                  longitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.longitude : _selectedLongitude,
-                  locationName: _taskMode == 'safe_exit' ? _selectedSavedLocation!.name : _selectedLocationName,
-                  startTime: _taskMode == 'safe_exit' 
-                      ? '${_safeExitStartTime.hour.toString().padLeft(2, '0')}:${_safeExitStartTime.minute.toString().padLeft(2, '0')}' 
-                      : null,
-                  endTime: _taskMode == 'safe_exit' 
-                      ? '${_safeExitEndTime.hour.toString().padLeft(2, '0')}:${_safeExitEndTime.minute.toString().padLeft(2, '0')}' 
-                      : null,
-                  radius: _taskMode == 'safe_exit' ? 100.0 : _selectedRadius,
-                  isLocationTask: _taskMode == 'location' || _taskMode == 'safe_exit',
-                  isSafeExitTask: _taskMode == 'safe_exit',
-                );
-
-                Navigator.pop(context);
-              },
-              child: const Text(
-                'Hedef Ekle',
-                style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PulseButtonWrapper extends StatefulWidget {
+  final Widget child;
+  final bool animate;
+  final Color color;
+
+  const _PulseButtonWrapper({required this.child, required this.animate, required this.color});
+
+  @override
+  State<_PulseButtonWrapper> createState() => _PulseButtonWrapperState();
+}
+
+class _PulseButtonWrapperState extends State<_PulseButtonWrapper> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    if (widget.animate) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_PulseButtonWrapper old) {
+    super.didUpdateWidget(old);
+    if (widget.animate && !old.animate) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.animate && old.animate) {
+      _controller.stop();
+      _controller.value = 0.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Transform.scale(
+        scale: widget.animate ? 1.0 + (_controller.value * 0.03) : 1.0,
+        child: Container(
+          decoration: widget.animate ? BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.6 * _controller.value),
+                blurRadius: 15 * _controller.value,
+                spreadRadius: 4 * _controller.value,
+              ),
+            ],
+          ) : null,
+          child: child,
+        ),
+      ),
+      child: widget.child,
     );
   }
 }

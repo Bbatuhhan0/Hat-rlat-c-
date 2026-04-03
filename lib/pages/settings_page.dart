@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../pages/manage_locations_page.dart';
+import 'dart:ui';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -13,12 +14,17 @@ class SettingsPage extends StatelessWidget {
     final isDarkMode = provider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDarkMode
-          ? Colors.black
-          : CupertinoColors.systemGroupedBackground,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Ayarlar'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
       ),
       body: ListView(
         children: [
@@ -167,10 +173,33 @@ class SettingsPage extends StatelessWidget {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                blurRadius: 20,
+              ),
+            ],
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                isDarkMode ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.8),
+                isDarkMode ? Colors.white.withValues(alpha: 0.03) : Colors.white.withValues(alpha: 0.6),
+              ],
+            ),
+            border: Border.all(
+              color: isDarkMode ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.1),
+              width: 0.5,
+            ),
           ),
-          child: Column(children: children),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Column(children: children),
+            ),
+          ),
         ),
       ],
     );
@@ -190,7 +219,7 @@ class SettingsPage extends StatelessWidget {
       trailing: CupertinoSwitch(
         value: value,
         onChanged: onChanged,
-        activeTrackColor: CupertinoColors.systemBlue,
+        activeTrackColor: const Color(0xFF8E2DE2),
       ),
     );
   }

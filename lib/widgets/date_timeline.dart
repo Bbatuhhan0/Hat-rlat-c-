@@ -178,58 +178,75 @@ class _DateTimelineState extends State<DateTimeline> {
                             margin: const EdgeInsets.symmetric(horizontal: 2),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? CupertinoColors.systemBlue
-                                  : (isDarkMode
-                                        ? const Color(0xFF2C2C2E)
-                                        : Colors.white),
+                                  ? Colors.white.withValues(alpha: 0.2)
+                                  : Colors.white.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(16),
-                              border: isToday && !isSelected
-                                  ? Border.all(
-                                      color: CupertinoColors.systemBlue,
-                                      width: 1.5,
-                                    )
-                                  : null,
+                              border: Border.all(
+                                color: isSelected 
+                                    ? Colors.white.withValues(alpha: 0.5) 
+                                    : Colors.white.withValues(alpha: 0.1),
+                                width: 0.5,
+                              ),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: CupertinoColors.systemBlue
-                                            .withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 4),
-                                      ),
+                                        color: Colors.white.withValues(alpha: 0.1),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      )
                                     ]
                                   : null,
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
                               children: [
-                                Text(
-                                  DateFormat('E', 'tr_TR').format(date),
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600]),
-                                    fontWeight: FontWeight.w500,
+                                Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        DateFormat('E', 'tr_TR').format(date),
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: isSelected 
+                                              ? Colors.white 
+                                              : (isToday ? CupertinoColors.systemBlue : Colors.grey[500]),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        date.day.toString(),
+                                        style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected 
+                                              ? Colors.white 
+                                              : (isToday ? CupertinoColors.systemBlue : Colors.grey[400]),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  date.day.toString(),
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (isToday
-                                              ? CupertinoColors.systemBlue
-                                              : (isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black87)),
+                                if (isSelected)
+                                  Positioned(
+                                    bottom: 8,
+                                    child: Container(
+                                      height: 4,
+                                      width: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF8E2DE2),
+                                        borderRadius: BorderRadius.circular(2),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0xFF8E2DE2),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

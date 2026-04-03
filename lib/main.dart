@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter/services.dart';
@@ -67,28 +66,28 @@ class MyApp extends StatelessWidget {
                 : ThemeMode.light,
             theme: ThemeData(
               useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFFF2F2F7),
-              primaryColor: CupertinoColors.systemBlue,
+              scaffoldBackgroundColor: Colors.transparent,
+              primaryColor: const Color(0xFF8E2DE2), // Electric purple to vivid blue gradient used elsewhere
               colorScheme: ColorScheme.fromSeed(
-                seedColor: CupertinoColors.systemBlue,
+                seedColor: const Color(0xFF8E2DE2),
                 brightness: Brightness.light,
-                surface: Colors.white,
+                surface: Colors.white.withValues(alpha: 0.7),
               ),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFFF2F2F7),
+                backgroundColor: Colors.transparent,
                 elevation: 0,
                 scrolledUnderElevation: 0,
                 titleTextStyle: TextStyle(
                   color: Colors.black,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
                   fontFamily: '.SF Pro Display',
                 ),
                 iconTheme: IconThemeData(color: Colors.black),
               ),
               floatingActionButtonTheme: const FloatingActionButtonThemeData(
-                backgroundColor: CupertinoColors.systemBlue,
+                backgroundColor: Color(0xFF8E2DE2),
                 foregroundColor: Colors.white,
                 elevation: 4,
                 shape: CircleBorder(),
@@ -100,28 +99,28 @@ class MyApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFF1C1C1E),
-              primaryColor: CupertinoColors.systemBlue,
+              scaffoldBackgroundColor: Colors.transparent,
+              primaryColor: const Color(0xFF8E2DE2),
               colorScheme: ColorScheme.fromSeed(
-                seedColor: CupertinoColors.systemBlue,
+                seedColor: const Color(0xFF8E2DE2),
                 brightness: Brightness.dark,
-                surface: const Color(0xFF2C2C2E),
+                surface: Colors.white.withValues(alpha: 0.1),
               ),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF1C1C1E),
+                backgroundColor: Colors.transparent,
                 elevation: 0,
                 scrolledUnderElevation: 0,
                 titleTextStyle: TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
                   fontFamily: '.SF Pro Display',
                 ),
                 iconTheme: IconThemeData(color: Colors.white),
               ),
               floatingActionButtonTheme: const FloatingActionButtonThemeData(
-                backgroundColor: CupertinoColors.systemBlue,
+                backgroundColor: Color(0xFF8E2DE2),
                 foregroundColor: Colors.white,
                 elevation: 4,
                 shape: CircleBorder(),
@@ -138,7 +137,18 @@ class MyApp extends StatelessWidget {
                 data: MediaQuery.of(
                   context,
                 ).copyWith(alwaysUse24HourFormat: taskProvider.is24HourFormat),
-                child: child!,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: taskProvider.isDarkMode
+                          ? const [Color(0xFF0F0C29), Color(0xFF302B63)]
+                          : const [Color(0xFFF9F9FF), Color(0xFFE6E6FA)],
+                    ),
+                  ),
+                  child: child!,
+                ),
               );
             },
             home: const HomePage(),
