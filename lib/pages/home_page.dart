@@ -9,7 +9,9 @@ import '../widgets/date_timeline.dart';
 import '../widgets/daily_progress_card.dart';
 import 'stats_page.dart';
 import 'manage_goals_page.dart';
+import 'settings_page.dart';
 import 'package:lottie/lottie.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,6 +23,53 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showCelebration = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermissions();
+    });
+  }
+
+  Future<void> _checkPermissions() async {
+    bool allGranted = true;
+
+    if (!await Permission.location.request().isGranted) allGranted = false;
+    if (!await Permission.locationAlways.request().isGranted) allGranted = false;
+    if (!await Permission.notification.request().isGranted) allGranted = false;
+    if (!await Permission.ignoreBatteryOptimizations.request().isGranted) allGranted = false;
+
+    if (!allGranted && mounted) {
+      _showPermissionWarning();
+    }
+  }
+
+  void _showPermissionWarning() {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Eksik İzinler!'),
+        content: const Text(
+          'Arka planda konum ve ayrılma hatırlatıcılarının düzgün çalışması için "Her Zaman Konum", "Bildirim" ve "Pil Optimizasyonunu Yoksay" izinlerini vermeniz gerekmektedir.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Anladım'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text('Ayarlara Git'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   void _triggerCelebration() {
     setState(() => _showCelebration = true);
@@ -121,12 +170,12 @@ class _HomePageState extends State<HomePage> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                const SizedBox(height: 50), // Safe Area equiv
-                Row(
+          child: Column(
+            children: [
+              const SizedBox(height: 50), // Safe Area equiv
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
@@ -149,13 +198,16 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const DateTimeline(),
-                const SizedBox(height: 10),
-                const DailyProgressCard(),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+              const SizedBox(height: 10),
+              const DateTimeline(),
+              const SizedBox(height: 10),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: DailyProgressCard(),
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
 
@@ -171,14 +223,26 @@ class _HomePageState extends State<HomePage> {
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 50),
-                      child: Text(
-                        'Planlarını eklemeye başla',
-                        style: TextStyle(
-                          color: isDarkMode
-                              ? Colors.grey[600]
-                              : Colors.grey[400],
-                          fontSize: 18,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            CupertinoIcons.tray,
+                            size: 50,
+                            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Bugün için planlanan rutin yok',
+                            style: TextStyle(
+                              color: isDarkMode
+                                  ? Colors.grey[500]
+                                  : Colors.grey[600],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -239,7 +303,13 @@ class _HomePageState extends State<HomePage> {
               'Ayarlar',
               style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
             ),
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+              Navigator.push(
+                context,
+                CupertinoPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
           ),
           const Divider(),
           ListTile(

@@ -9,9 +9,14 @@ class Task {
   final bool isCompleted;
   final int? colorValue;
   final bool isBulk; // New field
+  final bool isLocationTask;
   final double? latitude;
   final double? longitude;
   final double? radius;
+  final bool isSafeExitTask; // New field for Safe Exit tasks
+  final String? locationName;
+  final String? startTime;
+  final String? endTime;
 
   // Compatibility fields
   final String category;
@@ -28,6 +33,7 @@ class Task {
     this.isCompleted = false,
     this.colorValue,
     this.isBulk = false,
+    this.isLocationTask = false,
     this.category = 'Genel',
     this.streakCount = 0,
     this.currentCount = 0,
@@ -35,6 +41,10 @@ class Task {
     this.latitude,
     this.longitude,
     this.radius = 1000.0,
+    this.isSafeExitTask = false,
+    this.locationName,
+    this.startTime,
+    this.endTime,
   });
 
   // Derived property for UI
@@ -66,6 +76,7 @@ class Task {
     bool? isCompleted,
     int? colorValue,
     bool? isBulk,
+    bool? isLocationTask,
     String? category,
     int? streakCount,
     int? currentCount,
@@ -73,6 +84,10 @@ class Task {
     double? latitude,
     double? longitude,
     double? radius,
+    bool? isSafeExitTask,
+    String? locationName,
+    String? startTime,
+    String? endTime,
   }) {
     return Task(
       id: id ?? this.id,
@@ -83,6 +98,7 @@ class Task {
       isCompleted: isCompleted ?? this.isCompleted,
       colorValue: colorValue ?? this.colorValue,
       isBulk: isBulk ?? this.isBulk,
+      isLocationTask: isLocationTask ?? this.isLocationTask,
       category: category ?? this.category,
       streakCount: streakCount ?? this.streakCount,
       currentCount: currentCount ?? this.currentCount,
@@ -90,6 +106,10 @@ class Task {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       radius: radius ?? this.radius,
+      isSafeExitTask: isSafeExitTask ?? this.isSafeExitTask,
+      locationName: locationName ?? this.locationName,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
     );
   }
 
@@ -103,6 +123,7 @@ class Task {
       'isCompleted': isCompleted,
       'colorValue': colorValue,
       'isBulk': isBulk,
+      'isLocationTask': isLocationTask,
       'category': category,
       'streakCount': streakCount,
       'currentCount': currentCount,
@@ -110,6 +131,10 @@ class Task {
       'latitude': latitude,
       'longitude': longitude,
       'radius': radius,
+      'isSafeExitTask': isSafeExitTask,
+      'locationName': locationName,
+      'startTime': startTime,
+      'endTime': endTime,
     };
   }
 
@@ -123,6 +148,7 @@ class Task {
       isCompleted: map['isCompleted'] == true,
       colorValue: map['colorValue'],
       isBulk: map['isBulk'] ?? false,
+      isLocationTask: map['isLocationTask'] ?? false,
       category: map['category'] ?? 'Genel',
       streakCount: map['streakCount'] ?? 0,
       currentCount: map['currentCount'] ?? 0,
@@ -136,6 +162,10 @@ class Task {
       radius: map['radius'] != null
           ? (map['radius'] as num).toDouble()
           : 1000.0,
+      isSafeExitTask: map['isSafeExitTask'] ?? false,
+      locationName: map['locationName'],
+      startTime: map['startTime'],
+      endTime: map['endTime'],
     );
   }
 

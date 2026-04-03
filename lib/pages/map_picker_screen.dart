@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -24,6 +25,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     41.0082,
     28.9784,
   ); // Default to Istanbul
+  LatLng? _userLocation;
+  StreamSubscription<Position>? _positionStream;
   String _currentAddress = 'Konum aranıyor...';
   bool _isLoading = true;
 
@@ -33,50 +36,72 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     _determineInitialPosition();
   }
 
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    super.dispose();
+  }
+
   Future<void> _determineInitialPosition() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (serviceEnabled) {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission != LocationPermission.denied &&
+          permission != LocationPermission.deniedForever) {
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+            ),
+          );
+          _userLocation = LatLng(position.latitude, position.longitude);
+
+          // Start continuous tracking for "aktif konum"
+          _positionStream =
+              Geolocator.getPositionStream(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.bestForNavigation,
+                  distanceFilter: 10,
+                ),
+              ).listen((Position newPos) {
+                if (mounted) {
+                  setState(() {
+                    _userLocation = LatLng(newPos.latitude, newPos.longitude);
+                  });
+                }
+              });
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
       _currentPosition = LatLng(
         widget.initialLatitude!,
         widget.initialLongitude!,
       );
-      await _getAddressFromLatLng(_currentPosition);
-    } else {
-      bool serviceEnabled;
-      LocationPermission permission;
-
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // Location services are not enabled don't continue
-      } else {
-        permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-
-        if (permission != LocationPermission.denied &&
-            permission != LocationPermission.deniedForever) {
-          try {
-            final position = await Geolocator.getCurrentPosition(
-              locationSettings: const LocationSettings(
-                accuracy: LocationAccuracy.high,
-              ),
-            );
-            _currentPosition = LatLng(position.latitude, position.longitude);
-          } catch (e) {
-            // handle error
-          }
-        }
-      }
-      await _getAddressFromLatLng(_currentPosition);
+    } else if (_userLocation != null) {
+      _currentPosition = _userLocation!;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    await _getAddressFromLatLng(_currentPosition);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
 
     // Defer moving the map until it's built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _mapController.move(_currentPosition, 15.0);
+      if (mounted) {
+        _mapController.move(_currentPosition, 16.0);
+      }
     });
   }
 
@@ -88,30 +113,55 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       );
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        setState(() {
-          _currentAddress =
-              '${place.street}, ${place.subLocality}, ${place.locality}';
-          // Clean up empty strings and extra commas
-          _currentAddress = _currentAddress
-              .replaceAll(RegExp(r',\s*,'), ',')
-              .trim();
-          if (_currentAddress.startsWith(',')) {
-            _currentAddress = _currentAddress.substring(1).trim();
-          }
-          if (_currentAddress.endsWith(',')) {
-            _currentAddress = _currentAddress
-                .substring(0, _currentAddress.length - 1)
-                .trim();
-          }
-          if (_currentAddress.isEmpty) {
-            _currentAddress = "Bilinmeyen Konum";
-          }
-        });
+        if (mounted) {
+          setState(() {
+            List<String> addressParts = [];
+
+            if (place.street != null && place.street!.isNotEmpty) {
+              addressParts.add(place.street!);
+            } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+              addressParts.add(place.thoroughfare!);
+            }
+
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+              addressParts.add(place.subLocality!);
+            }
+
+            if (place.locality != null && place.locality!.isNotEmpty) {
+              addressParts.add(place.locality!);
+            } else if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+              addressParts.add(place.subAdministrativeArea!);
+            }
+
+            if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+              addressParts.add(place.administrativeArea!);
+            }
+
+            // Remove duplicates automatically
+            addressParts = addressParts.toSet().toList();
+
+            _currentAddress = addressParts.join(', ');
+
+            if (_currentAddress.isEmpty) {
+              _currentAddress = "Bilinmeyen Konum";
+            }
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _currentAddress = 'Adres bulunamadı';
-      });
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Adres bulunamadı';
+        });
+      }
+    }
+  }
+
+  void _moveToUserLocation() {
+    if (_userLocation != null) {
+      _mapController.move(_userLocation!, 16.0);
+      _currentPosition = _userLocation!;
+      _getAddressFromLatLng(_userLocation!);
     }
   }
 
@@ -141,13 +191,12 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: _currentPosition,
-                initialZoom: 15.0,
+                initialZoom: 16.0,
                 onPositionChanged: (MapPosition position, bool hasGesture) {
                   if (position.center != null) {
                     _currentPosition = position.center!;
                   }
                 },
-                // Fetch address only when map stops moving to avoid rate limits
                 onMapEvent: (MapEvent event) {
                   if (event is MapEventMoveEnd) {
                     _getAddressFromLatLng(_currentPosition);
@@ -157,22 +206,66 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName:
-                      'com.example.hedef_takip', // Replace with your app's actual package name
+                  userAgentPackageName: 'com.example.hedef_takip',
                 ),
+                if (_userLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _userLocation!,
+                        width: 40,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue.withValues(alpha: 0.3),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 15,
+                              height: 15,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.blue,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             )
           else
             const Center(child: CircularProgressIndicator()),
 
-          // Center Pin
+          // Exact Center Pin Setup - Tips exactly align with Map Center
           if (!_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: 40.0,
-                ), // Adjust to center the tip of the pin
-                child: Icon(Icons.location_on, size: 50, color: Colors.red),
+            const IgnorePointer(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: 50.0,
+                  ), // Icon size is 50, pushing bottom 50 moves the visual tip exactly to the map center.
+                  child: Icon(Icons.location_on, size: 50, color: Colors.red),
+                ),
+              ),
+            ),
+
+          // My Location Button
+          if (!_isLoading)
+            Positioned(
+              bottom: 110,
+              right: 20,
+              child: FloatingActionButton(
+                heroTag: "myLocation",
+                backgroundColor: Colors.white,
+                onPressed: _moveToUserLocation,
+                child: const Icon(Icons.my_location, color: Colors.blue),
               ),
             ),
 

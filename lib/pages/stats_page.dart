@@ -22,7 +22,7 @@ class StatsPage extends StatelessWidget {
                   builder: (context, provider, child) {
                     final isDarkMode = provider.isDarkMode;
                     return Text(
-                      'İstatistikler',
+                      'Genel Başarı',
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,

@@ -125,6 +125,15 @@ class _TaskItemState extends State<TaskItem> {
                               ),
                             ),
                             const SizedBox(width: 12),
+                            if (task.isSafeExitTask)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  Icons.home_rounded,
+                                  size: 22,
+                                  color: Colors.green,
+                                ),
+                              ),
                             // Content
                             Expanded(
                               child: Column(
@@ -150,6 +159,17 @@ class _TaskItemState extends State<TaskItem> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (task.isSafeExitTask && task.startTime != null && task.endTime != null && !task.isCompleted) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Sadece ${task.startTime}-${task.endTime} arası koruma aktif',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                   // Time Display (New Model uses 'time' string HH:mm)
                                   if (!task.isCompleted) ...[
                                     const SizedBox(height: 4),

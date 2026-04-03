@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
 
@@ -16,6 +18,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    if (kIsWeb) return;
     tz.initializeTimeZones();
 
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -43,6 +46,7 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
+    if (kIsWeb) return;
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -62,24 +66,28 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     DateTimeComponents? matchDateTimeComponents,
+    bool playSound = true,
+    bool enableVibration = true,
   }) async {
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id,
       title,
       body,
       tz.TZDateTime.from(scheduledDate, tz.local),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'task_channel_id',
           'Task Reminders',
           channelDescription: 'Notifications for task reminders',
           importance: Importance.max,
           priority: Priority.high,
+          playSound: playSound,
+          enableVibration: enableVibration,
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
-          presentSound: true,
+          presentSound: playSound,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

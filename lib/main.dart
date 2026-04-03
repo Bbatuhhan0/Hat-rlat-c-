@@ -8,6 +8,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'pages/home_page.dart';
 import 'providers/task_provider.dart';
+import 'services/notification_service.dart';
+import 'services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,13 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+  // Initialize Notifications
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
+  
+  // Start background location tracking!
+  await initializeBackgroundService();
 
   runApp(const MyApp());
 }
@@ -124,6 +133,14 @@ class MyApp extends StatelessWidget {
                 titleMedium: TextStyle(color: Colors.white),
               ),
             ),
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(alwaysUse24HourFormat: taskProvider.is24HourFormat),
+                child: child!,
+              );
+            },
             home: const HomePage(),
           );
         },

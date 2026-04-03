@@ -59,7 +59,7 @@ class _DateTimelineState extends State<DateTimeline> {
     final monthName = _getMonthName(weekDates);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Column(
         children: [
           // Month Name Header
@@ -118,7 +118,7 @@ class _DateTimelineState extends State<DateTimeline> {
                       Text(
                         _capitalize(monthName),
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: isDarkMode
                               ? Colors.grey[400]
@@ -128,7 +128,7 @@ class _DateTimelineState extends State<DateTimeline> {
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_drop_down,
-                        size: 20,
+                        size: 24,
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[800],
                       ),
                     ],
@@ -141,6 +141,8 @@ class _DateTimelineState extends State<DateTimeline> {
             mainAxisSize: MainAxisSize.max,
             children: [
               IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   provider.setDate(
@@ -156,7 +158,7 @@ class _DateTimelineState extends State<DateTimeline> {
               ),
               Expanded(
                 child: SizedBox(
-                  height: 80,
+                  height: 105,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: weekDates.map((date) {
@@ -204,7 +206,7 @@ class _DateTimelineState extends State<DateTimeline> {
                                 Text(
                                   DateFormat('E', 'tr_TR').format(date),
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 15,
                                     color: isSelected
                                         ? Colors.white
                                         : (isDarkMode
@@ -213,11 +215,11 @@ class _DateTimelineState extends State<DateTimeline> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 8),
                                 Text(
                                   date.day.toString(),
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 26,
                                     fontWeight: FontWeight.bold,
                                     color: isSelected
                                         ? Colors.white
@@ -238,6 +240,8 @@ class _DateTimelineState extends State<DateTimeline> {
                 ),
               ),
               IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   provider.setDate(
