@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/task_provider.dart';
@@ -250,80 +251,170 @@ class StatsPage extends StatelessWidget {
 
   Widget _build30DayEfficiencyChart(bool isDarkMode, TaskProvider provider) {
     final stats = provider.monthlyCompletionRates;
-    // Convert map 0..29 (days ago) to spots.
-    // X axis: 0 is 30 days ago, 29 is today.
-    // stats[0] is Today (so X=29), stats[29] is 30 days ago (so X=0).
+    final now = DateTime.now();
 
-    List<FlSpot> spots = [];
-    for (int i = 0; i < 30; i++) {
-      // i is days ago.
-      // We want left-to-right graph. 0 on X axis = 30 days ago.
-      double x = (29 - i).toDouble();
-      double y = stats[i] ?? 0.0;
-      spots.add(FlSpot(x, y));
-    }
-    spots.sort((a, b) => a.x.compareTo(b.x));
+    // 30 günlükleri en eskiden bugüne sırala (29 days ago → today)
+    final days = List.generate(30, (i) => now.subtract(Duration(days: 29 - i)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '30 Günlük Verimlilik',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
-        const SizedBox(height: 16),
-        AspectRatio(
-          aspectRatio: 1.7,
-          child: LineChart(
-            LineChartData(
-              gridData: const FlGridData(show: false),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              minX: 0,
-              maxX: 29,
-              minY: 0,
-              maxY: 1.2, // bit of space on top
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  color: const Color(0xFF4A00E0),
-                  barWidth: 4,
-                  isStrokeCapRound: true,
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (spot, percent, barData, index) {
-                      return FlDotCirclePainter(
-                        radius: 5,
-                        color: Colors.white,
-                        strokeWidth: 3,
-                        strokeColor: const Color(0xFF8E2DE2),
-                      );
-                    },
+        Row(
+          children: [
+            Text(
+              '30 Günlük Aktivite',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+            ),
+            const Spacer(),
+            // Legend
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF8E2DE2).withValues(alpha: 0.5),
-                        const Color(0xFF4A00E0).withValues(alpha: 0.0),
-                      ],
-                    )
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Boş',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDarkMode ? Colors.white38 : Colors.black38,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8E2DE2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Tam',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDarkMode ? Colors.white38 : Colors.black38,
                   ),
                 ),
               ],
             ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Ay isimleri satırı
+        Row(
+          children: [
+            for (int week = 0; week < 5; week++) ...[
+              if (week < 4) ...[  
+                Expanded(
+                  child: Text(
+                    _weekLabel(days[week * 6]),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: isDarkMode ? Colors.white38 : Colors.black38,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ] else ...[  
+                Expanded(
+                  child: Text(
+                    _weekLabel(days[29]),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: isDarkMode ? Colors.white38 : Colors.black38,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Activity Grid
+        AspectRatio(
+          aspectRatio: 5.0, // 30 hücre = 6 satır x 5 sütun için iyi oran
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 10,   // 10 sütun x 3 satır = 30 gün
+              crossAxisSpacing: 5,
+              mainAxisSpacing: 5,
+            ),
+            itemCount: 30,
+            itemBuilder: (context, index) {
+              // index 0 = 29 days ago, index 29 = today
+              final dayIndex = 29 - index; // stats[0]=today, stats[29]=oldest
+              final rate = stats[dayIndex] ?? 0.0;
+              final isToday = index == 29;
+              
+              // Renk: veri yoksa çok açık, veri varsa yoğunluğa göre mor
+              Color cellColor;
+              if (rate <= 0.0) {
+                cellColor = isDarkMode
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.08);
+              } else if (rate < 0.25) {
+                cellColor = const Color(0xFF8E2DE2).withValues(alpha: 0.25);
+              } else if (rate < 0.5) {
+                cellColor = const Color(0xFF8E2DE2).withValues(alpha: 0.50);
+              } else if (rate < 0.75) {
+                cellColor = const Color(0xFF8E2DE2).withValues(alpha: 0.75);
+              } else {
+                cellColor = const Color(0xFF8E2DE2);
+              }
+
+              return Tooltip(
+                message: '${DateFormat('d MMM', 'tr_TR').format(days[index])}: ${(rate * 100).toStringAsFixed(0)}%',
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cellColor,
+                    borderRadius: BorderRadius.circular(3),
+                    border: isToday
+                        ? Border.all(color: const Color(0xFF8E2DE2), width: 1.5)
+                        : null,
+                  ),
+                ),
+              );
+            },
           ),
         ),
+        const SizedBox(height: 8),
+        // Tamamlanma oranı ortalaması
+        Builder(builder: (context) {
+          final nonZero = stats.values.where((v) => v > 0);
+          if (nonZero.isEmpty) return const SizedBox.shrink();
+          final avg = nonZero.reduce((a, b) => a + b) / nonZero.length;
+          return Text(
+            '30 gün ortalaması: %${(avg * 100).toStringAsFixed(0)} tamamlanma',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white38 : Colors.black38,
+            ),
+          );
+        }),
       ],
     );
+  }
+
+  String _weekLabel(DateTime date) {
+    final months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    return months[date.month - 1];
   }
 
   Widget _buildMonthlyPieChart(bool isDarkMode, TaskProvider provider) {

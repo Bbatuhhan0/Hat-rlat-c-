@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../widgets/task_item.dart';
@@ -10,9 +9,6 @@ import '../widgets/daily_progress_card.dart';
 import 'stats_page.dart';
 import 'manage_goals_page.dart';
 import 'settings_page.dart';
-import 'package:lottie/lottie.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:ui';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,186 +19,119 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _showCelebration = false;
   bool _isSheetOpen = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPermissions();
-    });
-  }
-
-  Future<void> _checkPermissions() async {
-    bool allGranted = true;
-
-    if (!await Permission.location.request().isGranted) allGranted = false;
-    if (!await Permission.locationAlways.request().isGranted) allGranted = false;
-    if (!await Permission.notification.request().isGranted) allGranted = false;
-    if (!await Permission.ignoreBatteryOptimizations.request().isGranted) allGranted = false;
-
-    if (!allGranted && mounted) {
-      _showPermissionWarning();
-    }
-  }
-
-  void _showPermissionWarning() {
-    showCupertinoDialog(
-      context: context,
-      builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('Eksik İzinler!'),
-        content: const Text(
-          'Arka planda konum ve ayrılma hatırlatıcılarının düzgün çalışması için "Her Zaman Konum", "Bildirim" ve "Pil Optimizasyonunu Yoksay" izinlerini vermeniz gerekmektedir.',
-        ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('Anladım'),
-            onPressed: () => Navigator.pop(ctx),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            child: const Text('Ayarlara Git'),
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _triggerCelebration() {
-    setState(() => _showCelebration = true);
-    HapticFeedback.heavyImpact();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _showCelebration = false);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Watch dark mode
-    final isDarkMode = context.watch<TaskProvider>().isDarkMode;
+    final isDarkMode = context.select<TaskProvider, bool>((p) => p.isDarkMode);
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(isDarkMode),
       backgroundColor: Colors.transparent,
-      body: AnimatedScale(
-        scale: _isSheetOpen ? 0.95 : 1.0,
-        curve: Curves.easeOutCubic,
-        duration: const Duration(milliseconds: 300),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          foregroundDecoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: _isSheetOpen ? 0.4 : 0.0),
-          ),
-          child: CupertinoTabScaffold(
-            backgroundColor: Colors.transparent,
-        tabBar: CupertinoTabBar(
-          backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-          activeColor: CupertinoColors.systemBlue,
-          inactiveColor: CupertinoColors.systemGrey,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.list_bullet),
-              label: 'Görevler',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.chart_bar_fill),
-              label: 'İstatistikler',
-            ),
-          ],
-        ),
-        tabBuilder: (context, index) {
-          if (index == 0) {
-            return CupertinoPageScaffold(
-              backgroundColor: Colors.transparent,
-              child: Stack(
-                children: [
-                  // Blob Background for depth
-                  Positioned(
-                    top: 150,
-                    left: MediaQuery.of(context).size.width / 2 - 150,
-                    child: Container(
-                      width: 300,
-                      height: 300,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF8E2DE2).withValues(alpha: 0.3),
-                            blurRadius: 100,
-                            spreadRadius: 30,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Main List
-                  _buildTaskView(isDarkMode),
-
-                  // FAB
-                  Positioned(
-                    bottom: 90,
-                    right: 20,
-                    child: FloatingActionButton(
-                      heroTag: 'addTask',
-                      onPressed: () async {
-                        setState(() => _isSheetOpen = true);
-                        await showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: isDarkMode
-                              ? const Color(0xFF2C2C2E)
-                              : Colors.white,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          builder: (context) => const AddTaskSheet(),
-                        );
-                        if (mounted) setState(() => _isSheetOpen = false);
-                      },
-                      child: const Icon(CupertinoIcons.add),
-                    ),
-                  ),
-
-                  // Celebration
-                  if (_showCelebration)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Lottie.network(
-                          'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json',
-                          fit: BoxFit.cover,
-                          repeat: false,
-                        ),
-                      ),
-                    ),
-                ],
+      body: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0.0, end: _isSheetOpen ? 1.0 : 0.0),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        builder: (context, val, child) {
+          if (val == 0.0) return child!;
+          return Transform.scale(
+            scale: 1.0 - (val * 0.05),
+            child: ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: val * 0.35),
+                BlendMode.darken,
               ),
-            );
-          } else {
-            return CupertinoPageScaffold(
-              backgroundColor: Colors.transparent,
-              child: const StatsPage(),
-            );
-          }
+              child: child,
+            ),
+          );
         },
+        child: CupertinoTabScaffold(
+          backgroundColor: Colors.transparent,
+          tabBar: CupertinoTabBar(
+            backgroundColor: Colors.transparent,
+            activeColor: const Color(0xFF8E2DE2),
+            inactiveColor: isDarkMode ? Colors.white54 : Colors.black54,
+            border: Border(
+              top: BorderSide(
+                color: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
+                width: 0.5,
+              ),
+            ),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.list_bullet),
+                activeIcon: Icon(
+                  CupertinoIcons.list_bullet,
+                  color: Color(0xFF8E2DE2),
+                  shadows: [Shadow(color: Color(0xFF8E2DE2), blurRadius: 12)],
+                ),
+                label: 'Görevler',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.chart_bar_fill),
+                activeIcon: Icon(
+                  CupertinoIcons.chart_bar_fill,
+                  color: Color(0xFF8E2DE2),
+                  shadows: [Shadow(color: Color(0xFF8E2DE2), blurRadius: 12)],
+                ),
+                label: 'İstatistikler',
+              ),
+            ],
+          ),
+          tabBuilder: (context, index) {
+            if (index == 0) {
+              return CupertinoPageScaffold(
+                backgroundColor: Colors.transparent,
+                child: Stack(
+                  children: [
+                    _buildTaskView(isDarkMode),
+                    Positioned(
+                      bottom: 90,
+                      right: 20,
+                      child: FloatingActionButton(
+                        heroTag: 'addTask',
+                        onPressed: () async {
+                          setState(() => _isSheetOpen = true);
+                          await showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            builder: (context) => const AddTaskSheet(),
+                          );
+                          if (mounted) setState(() => _isSheetOpen = false);
+                        },
+                        child: const Icon(CupertinoIcons.add),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const CupertinoPageScaffold(
+              backgroundColor: Colors.transparent,
+              child: StatsPage(),
+            );
+          },
+        ),
       ),
-     ),
-    ),
-   );
+    );
   }
 
   Widget _buildTaskView(bool isDarkMode) {
     return CustomScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       slivers: [
+        // AppBar — BackdropFilter kaldırıldı
         SliverAppBar(
-          backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
+          backgroundColor: isDarkMode
+              ? const Color(0xFF0F0C29).withValues(alpha: 0.95)
+              : Colors.white.withValues(alpha: 0.95),
           pinned: true,
           elevation: 0,
           scrolledUnderElevation: 0,
@@ -211,25 +140,23 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.menu, color: Colors.grey, size: 30),
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           ),
-          flexibleSpace: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: FlexibleSpaceBar(
-                centerTitle: true,
-                title: ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: isDarkMode 
-                        ? [const Color(0xFFE0E0E0), const Color(0xFFFFFFFF)] 
-                        : [const Color(0xFF333333), const Color(0xFF000000)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ).createShader(bounds),
-                  child: const Text('Zaman Takip', style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.2,
-                    color: Colors.white,
-                  )),
+          flexibleSpace: FlexibleSpaceBar(
+            centerTitle: true,
+            title: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: isDarkMode
+                    ? const [Color(0xFFE0E0E0), Color(0xFFFFFFFF)]
+                    : const [Color(0xFF333333), Color(0xFF000000)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: const Text(
+                'Zaman Takip',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -244,82 +171,39 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+
         SliverToBoxAdapter(
           child: Column(
-            children: [
-              const SizedBox(height: 30),
-              const Padding(
+            children: const [
+              SizedBox(height: 20),
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: DailyProgressCard(),
               ),
-              const SizedBox(height: 30),
-              const DateTimeline(),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
+              DateTimeline(),
+              SizedBox(height: 12),
             ],
           ),
         ),
 
-        // Task List
+        // Görev Listesi
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-          sliver: Consumer<TaskProvider>(
-            builder: (context, provider, _) {
-              final tasks = provider.tasksForSelectedDate;
-
+          sliver: Selector<TaskProvider, List>(
+            selector: (_, p) => p.tasksForSelectedDate,
+            builder: (context, tasks, _) {
               if (tasks.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 50),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            CupertinoIcons.tray,
-                            size: 50,
-                            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Bugün için planlanan rutin yok',
-                            style: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[500]
-                                  : Colors.grey[600],
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: _EmptyStateCard());
               }
-
               return SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final task = tasks[index];
-                  return TweenAnimationBuilder<double>(
-                    key: ValueKey('${task.id}_${provider.selectedDate.day}'),
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    duration: Duration(milliseconds: 400 + (index * 50).clamp(0, 500)),
-                    curve: Curves.easeOutQuart,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 50 * (1 - value)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: TaskItem(
-                      task: task,
-                      onCompleted: _triggerCelebration,
-                    ),
-                  );
-                }, childCount: tasks.length),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => TaskItem(
+                    key: ValueKey(tasks[index].id),
+                    task: tasks[index],
+                  ),
+                  childCount: tasks.length,
+                ),
               );
             },
           ),
@@ -338,8 +222,8 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.black : CupertinoColors.systemBlue,
             ),
-            accountName: const Text("Batuhan Işık"),
-            accountEmail: const Text("YBS"),
+            accountName: const Text('Batuhan Işık'),
+            accountEmail: const Text('YBS'),
             currentAccountPicture: const CircleAvatar(
               child: Icon(Icons.person),
             ),
@@ -348,29 +232,38 @@ class _HomePageState extends State<HomePage> {
             leading: const Icon(CupertinoIcons.list_bullet),
             title: Text(
               'Hedefleri Yönet',
-              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black),
             ),
             onTap: () {
-              Navigator.pop(context); // Close drawer
-              Navigator.push(
-                context,
-                CupertinoPageRoute(
-                  builder: (context) => const ManageGoalsPage(),
-                ),
-              );
+              Navigator.pop(context);
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => const ManageGoalsPage(),
+                  ),
+                );
+              });
             },
           ),
           ListTile(
+            leading: const Icon(CupertinoIcons.settings),
             title: Text(
               'Ayarlar',
-              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black),
             ),
             onTap: () {
-              Navigator.pop(context); // Close drawer
-              Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (context) => const SettingsPage()),
-              );
+              Navigator.pop(context);
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (_) => const SettingsPage()),
+                );
+              });
             },
           ),
           const Divider(),
@@ -378,16 +271,17 @@ class _HomePageState extends State<HomePage> {
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: const Text(
               'Tüm Verileri Temizle',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.red, fontWeight: FontWeight.bold),
             ),
             onTap: () {
-              Navigator.pop(context); // Close drawer
+              Navigator.pop(context);
               showCupertinoDialog(
                 context: context,
                 builder: (ctx) => CupertinoAlertDialog(
                   title: const Text('Tüm Veriler Silinecek!'),
                   content: const Text(
-                    'Kayıtlı tüm görevler ve istatistikler kalıcı olarak silinecek. Bu işlem geri alınamaz. Onaylıyor musunuz?',
+                    'Kayıtlı tüm görevler ve istatistikler kalıcı olarak silinecek. Bu işlem geri alınamaz.',
                   ),
                   actions: [
                     CupertinoDialogAction(
@@ -408,6 +302,68 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Görev yok durumu — ayrı const widget: rebuild yok
+class _EmptyStateCard extends StatelessWidget {
+  const _EmptyStateCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = context.select<TaskProvider, bool>((p) => p.isDarkMode);
+    return Padding(
+      padding: const EdgeInsets.only(top: 40, left: 8, right: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: isDarkMode
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.white.withValues(alpha: 0.85),
+          border: Border.all(
+            color: isDarkMode
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 0.8,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              CupertinoIcons.checkmark_seal,
+              size: 56,
+              color: const Color(0xFF8E2DE2).withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 16),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF8E2DE2), Color(0xFFFF0080)],
+              ).createShader(bounds),
+              child: const Text(
+                'Her Şey Planlandı! ✨',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bugünlük her şey yolunda.\nYeni bir hedef eklemeye ne dersin?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDarkMode ? Colors.white60 : Colors.black54,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
 import '../providers/task_provider.dart';
 import '../models/saved_location.dart';
 import '../pages/map_picker_screen.dart';
-import 'package:lottie/lottie.dart';
 
 class AddTaskSheet extends StatefulWidget {
   const AddTaskSheet({super.key});
@@ -107,20 +107,32 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     final inputColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey[100];
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 20,
-        right: 20,
-        top: 20,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      // BackdropFilter kaldırıldı — sheet açılırken tüm ekranı blur etmeye gerek yok
+      child: Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? const Color(0xFF1C1C2E).withValues(alpha: 0.97)
+              : Colors.white.withValues(alpha: 0.97),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 1.0,
+            ),
+          ),
+        ),
+        child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Drag Handle
@@ -386,75 +398,221 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
             // Time Selection
             if (_taskMode == 'safe_exit') ...[
-              const Text(
-                'Koruma Hangi Saatlerde Aktif Olsun?',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: _safeExitStartTime,
-                        );
-                        if (time != null) {
-                          setState(() => _safeExitStartTime = time);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: inputColor,
-                          borderRadius: BorderRadius.circular(12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      isDarkMode ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.85),
+                      isDarkMode ? Colors.white.withValues(alpha: 0.03) : Colors.white.withValues(alpha: 0.6),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.07),
+                    width: 0.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(CupertinoIcons.clock, size: 16, color: Color(0xFF8E2DE2)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Koruma Saatleri',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            letterSpacing: -0.3,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Başlangıç: ${_safeExitStartTime.format(context)}',
-                              style: TextStyle(color: textColor),
-                            ),
-                          ],
-                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Belirtilen saatler arasında konumdan ayrılınca bildirim gönderilir.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.white38 : Colors.black38,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: _safeExitEndTime,
-                        );
-                        if (time != null) {
-                          setState(() => _safeExitEndTime = time);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: inputColor,
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 16),
+                    // START TIME
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'BAŞLANGIÇ',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: const Color(0xFF8E2DE2).withValues(alpha: 0.8),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () async {
+                                  await showCupertinoModalPopup(
+                                    context: context,
+                                    builder: (ctx) => Container(
+                                      height: 250,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                      ),
+                                      child: CupertinoTimerPicker(
+                                        mode: CupertinoTimerPickerMode.hm,
+                                        initialTimerDuration: Duration(
+                                          hours: _safeExitStartTime.hour,
+                                          minutes: _safeExitStartTime.minute,
+                                        ),
+                                        onTimerDurationChanged: (duration) {
+                                          setState(() {
+                                            _safeExitStartTime = TimeOfDay(
+                                              hour: duration.inHours,
+                                              minute: duration.inMinutes % 60,
+                                            );
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF8E2DE2).withValues(alpha: 0.35),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(CupertinoIcons.time, color: Colors.white, size: 16),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _safeExitStartTime.format(context),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Bitiş: ${_safeExitEndTime.format(context)}',
-                              style: TextStyle(color: textColor),
-                            ),
-                          ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Icon(
+                            CupertinoIcons.arrow_right,
+                            color: isDarkMode ? Colors.white38 : Colors.black38,
+                          ),
                         ),
-                      ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'BİTİŞ',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: const Color(0xFF4A00E0).withValues(alpha: 0.8),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () async {
+                                  await showCupertinoModalPopup(
+                                    context: context,
+                                    builder: (ctx) => Container(
+                                      height: 250,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                      ),
+                                      child: CupertinoTimerPicker(
+                                        mode: CupertinoTimerPickerMode.hm,
+                                        initialTimerDuration: Duration(
+                                          hours: _safeExitEndTime.hour,
+                                          minutes: _safeExitEndTime.minute,
+                                        ),
+                                        onTimerDurationChanged: (duration) {
+                                          setState(() {
+                                            _safeExitEndTime = TimeOfDay(
+                                              hour: duration.inHours,
+                                              minute: duration.inMinutes % 60,
+                                            );
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(0xFF4A00E0),
+                                        const Color(0xFF8E2DE2).withValues(alpha: 0.7),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF4A00E0).withValues(alpha: 0.35),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(CupertinoIcons.time, color: Colors.white, size: 16),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _safeExitEndTime.format(context),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
             ] else if (_taskMode == 'bulk') ...[
@@ -734,20 +892,31 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                               endTime: _taskMode == 'safe_exit' 
                                   ? '${_safeExitEndTime.hour.toString().padLeft(2, '0')}:${_safeExitEndTime.minute.toString().padLeft(2, '0')}' 
                                   : null,
-                              radius: _taskMode == 'safe_exit' ? 100.0 : _selectedRadius,
+                              radius: _taskMode == 'safe_exit' ? 50.0 : _selectedRadius,
                               isLocationTask: _taskMode == 'location' || _taskMode == 'safe_exit',
                               isSafeExitTask: _taskMode == 'safe_exit',
                             );
                             Navigator.pop(context);
                           });
                         },
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                             Text(
-                              'Hedef Ekle',
-                              style: TextStyle(color: Colors.white, fontSize: 16),
-                             ),
+                            if (_isSaving)
+                              Lottie.network(
+                                'https://assets5.lottiefiles.com/packages/lf20_y2hxjcbg.json',
+                                height: 30,
+                                repeat: false,
+                              ),
+                            if (!_isSaving)
+                               Text(
+                                'Görevi Kaydet',
+                                style: TextStyle(
+                                  color: Colors.white, 
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                               ),
                           ],
                         ),
                       ),
@@ -755,6 +924,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             ),
           ],
         ),
+       ),
       ),
     );
   }

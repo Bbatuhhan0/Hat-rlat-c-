@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../pages/manage_locations_page.dart';
-import 'dart:ui';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -14,17 +13,16 @@ class SettingsPage extends StatelessWidget {
     final isDarkMode = provider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
+      backgroundColor: isDarkMode
+          ? const Color(0xFF0F0C29)
+          : const Color(0xFFF9F9FF),
       appBar: AppBar(
         title: const Text('Ayarlar'),
-        backgroundColor: isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: Colors.transparent),
-          ),
-        ),
+        backgroundColor: isDarkMode
+            ? const Color(0xFF0F0C29)
+            : const Color(0xFFF9F9FF),
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: ListView(
         children: [
@@ -121,6 +119,63 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 30),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: GestureDetector(
+              onTap: () {
+                showCupertinoDialog(
+                  context: context,
+                  builder: (confirmCtx) => CupertinoAlertDialog(
+                    title: const Text('Tüm Verileri Temizle'),
+                    content: const Text(
+                      "İstatistikler, kayıtlar ve hedefler kalıcı olarak silinecek. Onaylıyor musunuz?",
+                    ),
+                    actions: [
+                      CupertinoDialogAction(
+                        child: const Text('İptal'),
+                        onPressed: () => Navigator.pop(confirmCtx),
+                      ),
+                      CupertinoDialogAction(
+                        isDestructiveAction: true,
+                        child: const Text('Evet, Temizle'),
+                        onPressed: () {
+                          context.read<TaskProvider>().clearAllTasks();
+                          Navigator.pop(confirmCtx);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.redAccent.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: Colors.redAccent.withValues(alpha: 0.5),
+                    width: 1.0,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(CupertinoIcons.trash, color: Colors.redAccent),
+                    SizedBox(width: 8),
+                    Text(
+                      'Tüm Verileri Temizle',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -190,16 +245,11 @@ class SettingsPage extends StatelessWidget {
             ),
             border: Border.all(
               color: isDarkMode ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.1),
-              width: 0.5,
+              width: 0.8,
             ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Column(children: children),
-            ),
-          ),
+          // BackdropFilter kaldırıldı — sayfa açılırken donmaya neden oluyordu
+          child: Column(children: children),
         ),
       ],
     );

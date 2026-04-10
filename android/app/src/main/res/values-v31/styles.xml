@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">#0F0C29</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_icon</item>
+        <!-- Set the splash screen behavior to ensure it doesn't show an icon -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>
