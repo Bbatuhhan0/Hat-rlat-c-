@@ -914,6 +914,10 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         onPressed: () {
                           if (!_isFormValid) return;
                           
+                          if (_subTaskController.text.trim().isNotEmpty) {
+                            _addSubTask();
+                          }
+                          
                           setState(() => _isSaving = true);
 
                           final List<String> times;
@@ -934,7 +938,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                 times: times,
                                 notes: _notesController.text,
                                 colorValue: _selectedColor.toARGB32(),
-                                category: _taskMode == 'safe_exit' ? 'Ayrılma Hatırlatıcısı' : 'Genel',
+                                category: _taskMode == 'safe_exit' 
+                                    ? 'Ayrılma Hatırlatıcısı' 
+                                    : (_taskMode == 'location' ? 'Konum' : 'Genel'),
                                 isBulk: _taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode != 'single'),
                                 repetitionType: _taskMode == 'bulk'
                                     ? _selectedRepetition

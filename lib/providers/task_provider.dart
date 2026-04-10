@@ -8,6 +8,7 @@ import '../models/task_model.dart';
 import '../models/saved_location.dart';
 import '../services/notification_service.dart';
 import '../services/background_service.dart';
+import '../services/task_database.dart';
 
 class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
@@ -217,6 +218,7 @@ class TaskProvider with ChangeNotifier {
     // We will use a counter.
     int counter = 0;
     final baseId = now.microsecondsSinceEpoch;
+    final List<Task> createdTasks = [];
 
     for (var d in targetDates) {
       if (selectedWeekdays != null && !selectedWeekdays.contains(d.weekday)) {
@@ -248,6 +250,7 @@ class TaskProvider with ChangeNotifier {
           subTasks: subTasks,
         );
 
+        createdTasks.add(newTask);
         _tasks.add(newTask);
 
         // Schedule notification (Konumlu görev değilse saatli bildirim kur)
@@ -303,7 +306,7 @@ class TaskProvider with ChangeNotifier {
     }
 
     notifyListeners();
-    await _saveTasks();
+    await TaskDatabase.instance.insertTasks(createdTasks);
     _checkLocationTracking();
 
     if (isLocationTask && !kIsWeb) {
@@ -320,7 +323,7 @@ class TaskProvider with ChangeNotifier {
     NotificationService().cancelNotification(id.hashCode.abs());
     _tasks.removeWhere((t) => t.id == id);
     notifyListeners();
-    await _saveTasks();
+    await TaskDatabase.instance.deleteTask(id);
     _checkLocationTracking();
   }
 
@@ -335,24 +338,28 @@ class TaskProvider with ChangeNotifier {
               t.date.day == date.day,
         )
         .toList();
+    final List<String> idsToRemove = [];
     for (var t in tasksToRemove) {
       NotificationService().cancelNotification(t.id.hashCode.abs());
+      idsToRemove.add(t.id);
       _tasks.remove(t);
     }
     notifyListeners();
-    await _saveTasks();
+    await TaskDatabase.instance.deleteTasks(idsToRemove);
     _checkLocationTracking();
   }
 
   Future<void> deleteAllTasksWithTitle(String title) async {
     // Tüm zamanlardan bu başlığa sahip tüm hedefleri siler
     final tasksToRemove = _tasks.where((t) => t.title == title).toList();
+    final List<String> idsToRemove = [];
     for (var t in tasksToRemove) {
       NotificationService().cancelNotification(t.id.hashCode.abs());
+      idsToRemove.add(t.id);
       _tasks.remove(t);
     }
     notifyListeners();
-    await _saveTasks();
+    await TaskDatabase.instance.deleteTasks(idsToRemove);
     _checkLocationTracking();
   }
 
@@ -371,12 +378,14 @@ class TaskProvider with ChangeNotifier {
       return taskDate.compareTo(startDate) >= 0 &&
           taskDate.compareTo(endDate) <= 0;
     }).toList();
+    final List<String> idsToRemove = [];
     for (var t in tasksToRemove) {
       NotificationService().cancelNotification(t.id.hashCode.abs());
+      idsToRemove.add(t.id);
       _tasks.remove(t);
     }
     notifyListeners();
-    await _saveTasks();
+    await TaskDatabase.instance.deleteTasks(idsToRemove);
     _checkLocationTracking();
   }
 
@@ -394,7 +403,11 @@ class TaskProvider with ChangeNotifier {
       _tasks[index] = task.copyWith(isCompleted: isNowCompleted);
 
       if (isNowCompleted) {
-        NotificationService().cancelNotification(task.id.hashCode.abs());
+        try {
+          NotificationService().cancelNotification(task.id.hashCode.abs());
+        } catch (e) {
+          debugPrint('Cancel notification error: $e');
+        }
         _calculateStreak();
       } else {
         // Reschedule if it's in the future
@@ -431,7 +444,7 @@ class TaskProvider with ChangeNotifier {
       }
 
       notifyListeners();
-      await _saveTasks();
+      await TaskDatabase.instance.updateTask(_tasks[index]);
       _checkLocationTracking();
     }
   }
@@ -453,7 +466,11 @@ class TaskProvider with ChangeNotifier {
         );
         
         if (allDone && !wasCompleted) {
-          NotificationService().cancelNotification(task.id.hashCode.abs());
+          try {
+            NotificationService().cancelNotification(task.id.hashCode.abs());
+          } catch (e) {
+            debugPrint('Cancel notification error: $e');
+          }
           _calculateStreak();
         } else if (!allDone && wasCompleted) {
           if (!task.isLocationTask) {
@@ -489,7 +506,7 @@ class TaskProvider with ChangeNotifier {
         }
 
         notifyListeners();
-        await _saveTasks();
+        await TaskDatabase.instance.updateTask(_tasks[index]);
         _checkLocationTracking();
       }
     }
@@ -500,6 +517,7 @@ class TaskProvider with ChangeNotifier {
     _tasks.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('tasks_data_v3');
+    await TaskDatabase.instance.clearAll();
     notifyListeners();
     _checkLocationTracking();
   }
@@ -558,24 +576,8 @@ class TaskProvider with ChangeNotifier {
 
   // --- Persistence ---
 
-  Future<void> _saveTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> encodedData = _tasks
-        .map((task) => task.toJson())
-        .toList();
-    await prefs.setStringList(
-      'tasks_data_v3',
-      encodedData,
-    ); // Bump version to v3
-  }
-
   Future<void> _loadTasks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String>? encodedData = prefs.getStringList('tasks_data_v3');
-
-    if (encodedData != null) {
-      _tasks = encodedData.map((item) => Task.fromJson(item)).toList();
-    }
+    _tasks = await TaskDatabase.instance.loadAllTasks();
     notifyListeners();
     _checkLocationTracking();
   }
