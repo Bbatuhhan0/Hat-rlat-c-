@@ -1,5 +1,20 @@
 import 'dart:convert';
 
+class SubTask {
+  final String title;
+  final bool isDone;
+
+  SubTask({required this.title, this.isDone = false});
+
+  Map<String, dynamic> toMap() => {'title': title, 'isDone': isDone};
+
+  factory SubTask.fromMap(Map<String, dynamic> map) => 
+      SubTask(title: map['title'], isDone: map['isDone'] == true);
+
+  SubTask copyWith({String? title, bool? isDone}) =>
+      SubTask(title: title ?? this.title, isDone: isDone ?? this.isDone);
+}
+
 class Task {
   final String id;
   final String title;
@@ -17,6 +32,7 @@ class Task {
   final String? locationName;
   final String? startTime;
   final String? endTime;
+  final List<SubTask> subTasks;
 
   // Compatibility fields
   final String category;
@@ -45,6 +61,7 @@ class Task {
     this.locationName,
     this.startTime,
     this.endTime,
+    this.subTasks = const [],
   });
 
   // Derived property for UI
@@ -88,6 +105,7 @@ class Task {
     String? locationName,
     String? startTime,
     String? endTime,
+    List<SubTask>? subTasks,
   }) {
     return Task(
       id: id ?? this.id,
@@ -110,6 +128,7 @@ class Task {
       locationName: locationName ?? this.locationName,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
+      subTasks: subTasks ?? this.subTasks,
     );
   }
 
@@ -135,6 +154,7 @@ class Task {
       'locationName': locationName,
       'startTime': startTime,
       'endTime': endTime,
+      'subTasks': subTasks.map((st) => st.toMap()).toList(),
     };
   }
 
@@ -166,6 +186,9 @@ class Task {
       locationName: map['locationName'],
       startTime: map['startTime'],
       endTime: map['endTime'],
+      subTasks: map['subTasks'] != null 
+          ? (map['subTasks'] as List).map((e) => SubTask.fromMap(e)).toList() 
+          : [],
     );
   }
 

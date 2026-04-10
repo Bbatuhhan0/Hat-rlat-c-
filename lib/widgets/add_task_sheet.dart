@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
 import '../providers/task_provider.dart';
 import '../models/saved_location.dart';
+import '../models/task_model.dart';
 import '../pages/map_picker_screen.dart';
 
 class AddTaskSheet extends StatefulWidget {
@@ -17,6 +18,8 @@ class AddTaskSheet extends StatefulWidget {
 class _AddTaskSheetState extends State<AddTaskSheet> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
+  final _subTaskController = TextEditingController();
+  final List<SubTask> _subTasks = [];
   
   bool _isSaving = false;
 
@@ -26,10 +29,20 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     _titleController.addListener(() => setState(() {}));
   }
 
+  void _addSubTask() {
+    if (_subTaskController.text.trim().isNotEmpty) {
+      setState(() {
+        _subTasks.add(SubTask(title: _subTaskController.text.trim()));
+        _subTaskController.clear();
+      });
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _subTaskController.dispose();
     super.dispose();
   }
 
@@ -241,6 +254,61 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
               style: TextStyle(color: textColor),
               maxLines: 2,
             ),
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _subTaskController,
+                    decoration: InputDecoration(
+                      hintText: 'Alt Görev Ekle',
+                      filled: true,
+                      fillColor: inputColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    style: TextStyle(color: textColor),
+                    onSubmitted: (_) => _addSubTask(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _addSubTask,
+                  icon: const Icon(CupertinoIcons.add_circled_solid, size: 32, color: Color(0xFF8E2DE2)),
+                ),
+              ],
+            ),
+            if (_subTasks.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ..._subTasks.asMap().entries.map((entry) {
+                final index = entry.key;
+                final subTask = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: inputColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(subTask.title, style: TextStyle(color: textColor)),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _subTasks.removeAt(index)),
+                        child: const Icon(CupertinoIcons.trash, size: 18, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: 16),
 
             // Bulk Options: Repetition Type
@@ -821,7 +889,6 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             ),
 
             const SizedBox(height: 24),
-
             // Add Button
             _PulseButtonWrapper(
               animate: _isFormValid && !_isSaving,
@@ -834,8 +901,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         width: double.infinity,
                         alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Lottie.network(
-                          'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json',
+                        child: Lottie.asset(
+                          'assets/animations/saving.json',
                           width: 50,
                           height: 50,
                           repeat: false,
@@ -864,47 +931,61 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                             times = ['${_singleTime.hour}:${_singleTime.minute}'];
                           }
 
-                          Future.delayed(const Duration(milliseconds: 1500), () {
+                          Future.delayed(const Duration(milliseconds: 1500), () async {
                             if (!mounted) return;
-                            context.read<TaskProvider>().addTask(
-                              title: _titleController.text,
-                              date: _selectedDate,
-                              times: times,
-                              notes: _notesController.text,
-                              colorValue: _selectedColor.toARGB32(),
-                              category: _taskMode == 'safe_exit' ? 'Ayrılma Hatırlatıcısı' : 'Genel',
-                              isBulk: _taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode != 'single'),
-                              repetitionType: _taskMode == 'bulk'
-                                  ? _selectedRepetition
-                                  : (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine' ? 'daily' : 'none'),
-                              selectedWeekdays: (_taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine')) 
-                                  ? _selectedWeekdays.toList() 
-                                  : null,
-                              specificDates: (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'multiple')
-                                  ? _safeExitMultipleDates
-                                  : null,
-                              latitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.latitude : _selectedLatitude,
-                              longitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.longitude : _selectedLongitude,
-                              locationName: _taskMode == 'safe_exit' ? _selectedSavedLocation!.name : _selectedLocationName,
-                              startTime: _taskMode == 'safe_exit' 
-                                  ? '${_safeExitStartTime.hour.toString().padLeft(2, '0')}:${_safeExitStartTime.minute.toString().padLeft(2, '0')}' 
-                                  : null,
-                              endTime: _taskMode == 'safe_exit' 
-                                  ? '${_safeExitEndTime.hour.toString().padLeft(2, '0')}:${_safeExitEndTime.minute.toString().padLeft(2, '0')}' 
-                                  : null,
-                              radius: _taskMode == 'safe_exit' ? 50.0 : _selectedRadius,
-                              isLocationTask: _taskMode == 'location' || _taskMode == 'safe_exit',
-                              isSafeExitTask: _taskMode == 'safe_exit',
-                            );
-                            Navigator.pop(context);
+                            try {
+                              await context.read<TaskProvider>().addTask(
+                                title: _titleController.text,
+                                date: _selectedDate,
+                                times: times,
+                                notes: _notesController.text,
+                                colorValue: _selectedColor.toARGB32(),
+                                category: _taskMode == 'safe_exit' ? 'Ayrılma Hatırlatıcısı' : 'Genel',
+                                isBulk: _taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode != 'single'),
+                                repetitionType: _taskMode == 'bulk'
+                                    ? _selectedRepetition
+                                    : (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine' ? 'daily' : 'none'),
+                                selectedWeekdays: (_taskMode == 'bulk' || (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'routine')) 
+                                    ? _selectedWeekdays.toList() 
+                                    : null,
+                                specificDates: (_taskMode == 'safe_exit' && _safeExitScheduleMode == 'multiple')
+                                    ? _safeExitMultipleDates
+                                    : null,
+                                latitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.latitude : _selectedLatitude,
+                                longitude: _taskMode == 'safe_exit' ? _selectedSavedLocation!.longitude : _selectedLongitude,
+                                locationName: _taskMode == 'safe_exit' ? _selectedSavedLocation!.name : _selectedLocationName,
+                                startTime: _taskMode == 'safe_exit' 
+                                    ? '${_safeExitStartTime.hour.toString().padLeft(2, '0')}:${_safeExitStartTime.minute.toString().padLeft(2, '0')}' 
+                                    : null,
+                                endTime: _taskMode == 'safe_exit' 
+                                    ? '${_safeExitEndTime.hour.toString().padLeft(2, '0')}:${_safeExitEndTime.minute.toString().padLeft(2, '0')}' 
+                                    : null,
+                                radius: _taskMode == 'safe_exit' ? 50.0 : _selectedRadius,
+                                isLocationTask: _taskMode == 'location' || _taskMode == 'safe_exit',
+                                isSafeExitTask: _taskMode == 'safe_exit',
+                                subTasks: _subTasks,
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(context);
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Bildirim kurulamadı, lütfen izinlerinizi kontrol edin.'),
+                                  backgroundColor: Colors.redAccent,
+                                  duration: Duration(seconds: 4),
+                                ),
+                              );
+                              setState(() => _isSaving = false);
+                            }
                           });
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             if (_isSaving)
-                              Lottie.network(
-                                'https://assets5.lottiefiles.com/packages/lf20_y2hxjcbg.json',
+                              Lottie.asset(
+                                'assets/animations/success.json',
                                 height: 30,
                                 repeat: false,
                               ),

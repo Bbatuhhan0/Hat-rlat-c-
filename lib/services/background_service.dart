@@ -303,6 +303,7 @@ Future<void> checkAndToggleService() async {
   if (hasLocationTasks) {
     if (!isRunning) {
       try {
+        await initializeBackgroundService();
         await service.startService();
       } catch (_) {}
     }

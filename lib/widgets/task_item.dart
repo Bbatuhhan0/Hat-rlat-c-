@@ -106,17 +106,16 @@ class _TaskItemState extends State<TaskItem> {
                     ),
                     child: Material(
                       color: Colors.transparent,
-                      child: IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Container(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
                               width: 8,
-                              color: taskColor.withValues(
-                                  alpha: task.isCompleted ? 0.3 : 0.8),
+                              color: taskColor.withValues(alpha: task.isCompleted ? 0.3 : 0.8),
                             ),
-                            Expanded(
-                              child: Padding(
+                          ),
+                        ),
+                        child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
                                   horizontal: 12,
@@ -133,6 +132,15 @@ class _TaskItemState extends State<TaskItem> {
                                         GestureDetector(
                                           onTap: () async {
                                             HapticFeedback.heavyImpact();
+                                            if (task.subTasks.isNotEmpty) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Lütfen önce alt görevleri tamamlayın'),
+                                                  duration: Duration(seconds: 2),
+                                                ),
+                                              );
+                                              return;
+                                            }
                                             context
                                                 .read<TaskProvider>()
                                                 .toggleTask(task.id);
@@ -152,9 +160,11 @@ class _TaskItemState extends State<TaskItem> {
                                               widget.onCompleted?.call();
                                             }
                                           },
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 300),
+                                          child: Opacity(
+                                            opacity: task.subTasks.isNotEmpty ? 0.5 : 1.0,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
                                             width: 28,
                                             height: 28,
                                             decoration: BoxDecoration(
@@ -187,6 +197,7 @@ class _TaskItemState extends State<TaskItem> {
                                                     color: Colors.white,
                                                   )
                                                 : null,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -474,55 +485,104 @@ class _TaskItemState extends State<TaskItem> {
                                     ),
                                     // Expanded Notes
                                     AnimatedSize(
-                                      duration:
-                                          const Duration(milliseconds: 350),
+                                      duration: const Duration(milliseconds: 350),
+                                      alignment: Alignment.topCenter,
                                       curve: Curves.easeInOut,
                                       child: _isExpanded &&
-                                              (task.notes?.isNotEmpty ?? false)
-                                          ? Container(
-                                              width: double.infinity,
-                                              padding: const EdgeInsets.only(
-                                                  top: 12, left: 40),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
+                                              ((task.notes?.isNotEmpty ?? false) || task.subTasks.isNotEmpty)
+                                            ? Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.only(top: 12, left: 40, right: 12, bottom: 8),
+                                                child: SingleChildScrollView(
+                                                  physics: const NeverScrollableScrollPhysics(),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
                                                   Divider(
                                                     color: isDarkMode
                                                         ? Colors.grey[800]
                                                         : Colors.grey[300],
                                                   ),
-                                                  const SizedBox(height: 8),
-                                                  Text(
-                                                    task.notes!,
-                                                    style: TextStyle(
-                                                      color: isDarkMode
-                                                          ? Colors.grey[300]
-                                                          : Colors.grey[700],
-                                                      fontSize: 15,
-                                                      height: 1.4,
+                                                  if (task.notes?.isNotEmpty ?? false) ...[
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      task.notes!,
+                                                      style: TextStyle(
+                                                        color: isDarkMode
+                                                            ? Colors.grey[300]
+                                                            : Colors.grey[700],
+                                                        fontSize: 15,
+                                                        height: 1.4,
+                                                      ),
                                                     ),
-                                                  ),
+                                                  ],
+                                                  if (task.subTasks.isNotEmpty) ...[
+                                                    if (task.notes?.isNotEmpty ?? false) const SizedBox(height: 12),
+                                                    Padding(
+                                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: task.subTasks.asMap().entries.map((entry) {
+                                                          final index = entry.key;
+                                                          final subTask = entry.value;
+                                                          return Padding(
+                                                            padding: const EdgeInsets.only(bottom: 8),
+                                                            child: GestureDetector(
+                                                              onTap: () {
+                                                                HapticFeedback.lightImpact();
+                                                                context.read<TaskProvider>().toggleSubTask(task.id, index);
+                                                              },
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(
+                                                                    subTask.isDone 
+                                                                        ? CupertinoIcons.check_mark_circled_solid 
+                                                                    : CupertinoIcons.circle,
+                                                                    size: 20,
+                                                                    color: subTask.isDone 
+                                                                        ? taskColor 
+                                                                        : (isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+                                                                  ),
+                                                                  const SizedBox(width: 8),
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      subTask.title,
+                                                                      style: TextStyle(
+                                                                        color: subTask.isDone 
+                                                                            ? (isDarkMode ? Colors.grey[600] : Colors.grey[400]) 
+                                                                            : (isDarkMode ? Colors.grey[300] : Colors.black87),
+                                                                        fontSize: 14,
+                                                                        decoration: subTask.isDone ? TextDecoration.lineThrough : null,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }).toList(),
+                                                      ),
+                                                    ),
+                                                  ]
                                                 ],
                                               ),
-                                            )
-                                          : const SizedBox.shrink(),
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+                                  ], // Column.children
+                                ),  // 1: Column
+                              ),   // 2: Padding
+                            ),    // 3: Container
+                          ),     // 4: Material
+                        ),      // 5: AnimatedContainer
+                      ),       // 6: ClipRRect
+                    ),        // 7: Container
+                  ),         // 8: AnimatedScale
+                ),          // 9: GestureDetector
+              ),           // 10: AnimatedScale
+            ),            // 11: AnimatedSlide
+          );             // 12: AnimatedOpacity
   }
 }

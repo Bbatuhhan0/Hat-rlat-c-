@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import '../models/task_model.dart';
 import '../models/saved_location.dart';
@@ -20,6 +19,22 @@ class TaskProvider with ChangeNotifier {
   // UI State
   DateTime _selectedDate = DateTime.now();
   DateTime get selectedDate => _selectedDate;
+
+  String _searchQuery = '';
+  String get searchQuery => _searchQuery;
+
+  String _selectedCategory = 'Hepsi';
+  String get selectedCategory => _selectedCategory;
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  void setSelectedCategory(String category) {
+    _selectedCategory = category;
+    notifyListeners();
+  }
 
   bool _isDarkMode = false;
   bool get isDarkMode => _isDarkMode;
@@ -44,9 +59,71 @@ class TaskProvider with ChangeNotifier {
   bool _isNotificationVibration = true;
   bool get isNotificationVibration => _isNotificationVibration;
 
+  // Streak State
+  int _currentStreak = 0;
+  String? _lastCompletionDate;
+
+  int get currentStreak {
+    if (_lastCompletionDate == null) return _currentStreak;
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month}-${now.day}';
+    final yesterday = now.subtract(const Duration(days: 1));
+    final yesterdayStr = '${yesterday.year}-${yesterday.month}-${yesterday.day}';
+
+    if (_lastCompletionDate != todayStr && _lastCompletionDate != yesterdayStr) {
+      return 0;
+    }
+    return _currentStreak;
+  }
+
+  Future<void> _loadStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    _currentStreak = prefs.getInt('currentStreak') ?? 0;
+    _lastCompletionDate = prefs.getString('lastCompletionDate');
+    notifyListeners();
+  }
+
+  Future<void> _saveStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentStreak', _currentStreak);
+    if (_lastCompletionDate != null) {
+      await prefs.setString('lastCompletionDate', _lastCompletionDate!);
+    }
+  }
+
+  void _calculateStreak() {
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month}-${now.day}';
+    final yesterday = now.subtract(const Duration(days: 1));
+    final yesterdayStr = '${yesterday.year}-${yesterday.month}-${yesterday.day}';
+
+    // If getter returns 0 because of being missed, we should reset the internal counter to 0 before running logic
+    if (currentStreak == 0) {
+       _currentStreak = 0;
+    }
+
+    if (_lastCompletionDate == todayStr) {
+      // Already incremented today
+      return;
+    } else if (_lastCompletionDate == yesterdayStr) {
+      // Completed yesterday, streak continues!
+      _currentStreak += 1;
+      _lastCompletionDate = todayStr;
+      _saveStreak();
+      notifyListeners();
+    } else {
+      // Missed yesterday, reset streak to 1 
+      _currentStreak = 1;
+      _lastCompletionDate = todayStr;
+      _saveStreak();
+      notifyListeners();
+    }
+  }
+
   TaskProvider() {
     _loadTasks();
     _loadSettings();
+    _loadStreak();
   }
 
   // --- Location logic ---
@@ -80,6 +157,7 @@ class TaskProvider with ChangeNotifier {
     double? latitude,
     double? longitude,
     double? radius,
+    List<SubTask> subTasks = const [],
   }) async {
     final now = DateTime.now();
 
@@ -148,6 +226,7 @@ class TaskProvider with ChangeNotifier {
           latitude: latitude,
           longitude: longitude,
           radius: radius,
+          subTasks: subTasks,
         );
 
         _tasks.add(newTask);
@@ -185,26 +264,14 @@ class TaskProvider with ChangeNotifier {
                   );
                 } else if (difference.inSeconds > -60 &&
                     difference.inSeconds <= 0) {
-                  NotificationService().flutterLocalNotificationsPlugin.show(
-                    uniqueId.hashCode.abs(),
-                    'Hedef Zamanı: $title',
-                    notes?.isNotEmpty == true
+                  NotificationService().showNotification(
+                    id: uniqueId.hashCode.abs(),
+                    title: 'Hedef Zamanı: $title',
+                    body: notes?.isNotEmpty == true
                         ? notes!
                         : 'Planladığın görevi yapma vakti geldi.',
-                    NotificationDetails(
-                      android: AndroidNotificationDetails(
-                        'task_channel_id',
-                        'Task Reminders',
-                        channelDescription: 'Notifications for task reminders',
-                        importance: Importance.max,
-                        priority: Priority.high,
-                        playSound: _isNotificationSound,
-                        enableVibration: _isNotificationVibration,
-                      ),
-                      iOS: DarwinNotificationDetails(
-                        presentSound: _isNotificationSound,
-                      ),
-                    ),
+                    playSound: _isNotificationSound,
+                    enableVibration: _isNotificationVibration,
                   );
                 }
               }
@@ -307,11 +374,13 @@ class TaskProvider with ChangeNotifier {
     final index = _tasks.indexWhere((t) => t.id == id);
     if (index != -1) {
       final task = _tasks[index];
+      if (task.subTasks.isNotEmpty) return;
       final isNowCompleted = !task.isCompleted;
       _tasks[index] = task.copyWith(isCompleted: isNowCompleted);
 
       if (isNowCompleted) {
         NotificationService().cancelNotification(task.id.hashCode.abs());
+        _calculateStreak();
       } else {
         // Reschedule if it's in the future
         try {
@@ -352,6 +421,63 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
+  Future<void> toggleSubTask(String taskId, int subTaskIndex) async {
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index != -1) {
+      final task = _tasks[index];
+      if (subTaskIndex >= 0 && subTaskIndex < task.subTasks.length) {
+        final subTask = task.subTasks[subTaskIndex];
+        final updatedSubTasks = List<SubTask>.from(task.subTasks);
+        updatedSubTasks[subTaskIndex] = subTask.copyWith(isDone: !subTask.isDone);
+        final allDone = updatedSubTasks.every((st) => st.isDone);
+        final wasCompleted = task.isCompleted;
+        
+        _tasks[index] = task.copyWith(
+          subTasks: updatedSubTasks,
+          isCompleted: allDone,
+        );
+        
+        if (allDone && !wasCompleted) {
+          NotificationService().cancelNotification(task.id.hashCode.abs());
+          _calculateStreak();
+        } else if (!allDone && wasCompleted) {
+          try {
+            final timeParts = task.time.split(':');
+            if (timeParts.length == 2) {
+              final int hour = int.parse(timeParts[0]);
+              final int minute = int.parse(timeParts[1]);
+              final scheduledDateTime = DateTime(
+                task.date.year,
+                task.date.month,
+                task.date.day,
+                hour,
+                minute,
+              );
+              if (scheduledDateTime.isAfter(DateTime.now()) && _isNotificationEnabled) {
+                NotificationService().scheduleNotification(
+                  id: task.id.hashCode.abs(),
+                  title: 'Hedef Zamanı: ${task.title}',
+                  body: task.notes?.isNotEmpty == true
+                      ? task.notes!
+                      : 'Planladığın görevi yapma vakti geldi.',
+                  scheduledDate: scheduledDateTime,
+                  playSound: _isNotificationSound,
+                  enableVibration: _isNotificationVibration,
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('Reschedule error: $e');
+          }
+        }
+
+        notifyListeners();
+        await _saveTasks();
+        _checkLocationTracking();
+      }
+    }
+  }
+
   Future<void> clearAllTasks() async {
     NotificationService().cancelAllNotifications();
     _tasks.clear();
@@ -387,6 +513,28 @@ class TaskProvider with ChangeNotifier {
           t.date.month == _selectedDate.month &&
           t.date.day == _selectedDate.day;
     }).toList();
+  }
+
+  List<Task> get filteredTasks {
+    List<Task> currentTasks = tasksForSelectedDate;
+
+    if (_searchQuery.trim().isNotEmpty) {
+      currentTasks = currentTasks
+          .where((t) => t.title.toLowerCase().contains(_searchQuery.trim().toLowerCase()))
+          .toList();
+    }
+
+    if (_selectedCategory != 'Hepsi') {
+      if (_selectedCategory == 'Konum') {
+        currentTasks = currentTasks.where((t) => t.isLocationTask && !t.isSafeExitTask).toList();
+      } else if (_selectedCategory == 'Ayrılma Hatırlatıcısı') {
+        currentTasks = currentTasks.where((t) => t.isSafeExitTask).toList();
+      } else {
+        currentTasks = currentTasks.where((t) => t.category == _selectedCategory || (!t.isLocationTask && !t.isSafeExitTask && _selectedCategory == 'Genel')).toList();
+      }
+    }
+
+    return currentTasks;
   }
 
   // --- Persistence ---

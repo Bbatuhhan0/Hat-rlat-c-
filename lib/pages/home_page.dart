@@ -20,6 +20,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSheetOpen = false;
+  bool _isSearchActive = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,26 +150,63 @@ class _HomePageState extends State<HomePage> {
           ),
           flexibleSpace: FlexibleSpaceBar(
             centerTitle: true,
-            title: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: isDarkMode
-                    ? const [Color(0xFFE0E0E0), Color(0xFFFFFFFF)]
-                    : const [Color(0xFF333333), Color(0xFF000000)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: const Text(
-                'Zaman Takip',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                  color: Colors.white,
+            title: _isSearchActive
+              ? SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.55,
+                  height: 36,
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Ara...',
+                      hintStyle: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      filled: true,
+                      fillColor: isDarkMode ? Colors.white10 : Colors.black12,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (val) => context.read<TaskProvider>().setSearchQuery(val),
+                  ),
+                )
+              : ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: isDarkMode
+                        ? const [Color(0xFFE0E0E0), Color(0xFFFFFFFF)]
+                        : const [Color(0xFF333333), Color(0xFF000000)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: const Text(
+                    'Zaman Takip',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.2,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ),
           actions: [
+            IconButton(
+              icon: Icon(
+                _isSearchActive ? CupertinoIcons.clear_circled : CupertinoIcons.search,
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isSearchActive = !_isSearchActive;
+                  if (!_isSearchActive) {
+                    _searchController.clear();
+                    context.read<TaskProvider>().setSearchQuery('');
+                  }
+                });
+              },
+            ),
             IconButton(
               icon: Icon(
                 isDarkMode ? CupertinoIcons.sun_max : CupertinoIcons.moon_fill,
@@ -174,15 +219,47 @@ class _HomePageState extends State<HomePage> {
 
         SliverToBoxAdapter(
           child: Column(
-            children: const [
-              SizedBox(height: 20),
-              Padding(
+            children: [
+              const SizedBox(height: 20),
+              const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: DailyProgressCard(),
               ),
-              SizedBox(height: 20),
-              DateTimeline(),
-              SizedBox(height: 12),
+              const SizedBox(height: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Selector<TaskProvider, String>(
+                  selector: (_, p) => p.selectedCategory,
+                  builder: (context, selectedCategory, _) {
+                    return Row(
+                      children: ['Hepsi', 'Genel', 'Konum', 'Ayrılma Hatırlatıcısı'].map((category) {
+                        final isSelected = selectedCategory == category;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ChoiceChip(
+                            label: Text(category),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                context.read<TaskProvider>().setSelectedCategory(category);
+                              }
+                            },
+                            selectedColor: const Color(0xFF8E2DE2).withValues(alpha: 0.2),
+                            labelStyle: TextStyle(
+                              color: isSelected ? const Color(0xFF8E2DE2) : (isDarkMode ? Colors.white : Colors.black),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              const DateTimeline(),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -191,7 +268,7 @@ class _HomePageState extends State<HomePage> {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
           sliver: Selector<TaskProvider, List>(
-            selector: (_, p) => p.tasksForSelectedDate,
+            selector: (_, p) => p.filteredTasks,
             builder: (context, tasks, _) {
               if (tasks.isEmpty) {
                 return const SliverToBoxAdapter(child: _EmptyStateCard());

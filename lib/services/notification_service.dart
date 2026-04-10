@@ -69,33 +69,38 @@ class NotificationService {
     bool playSound = true,
     bool enableVibration = true,
   }) async {
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(scheduledDate, tz.local),
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          'task_channel_id',
-          'Task Reminders',
-          channelDescription: 'Notifications for task reminders',
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: playSound,
-          enableVibration: enableVibration,
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tz.TZDateTime.from(scheduledDate, tz.local),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'task_channel_id',
+            'Task Reminders',
+            channelDescription: 'Notifications for task reminders',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: playSound,
+            enableVibration: enableVibration,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: playSound,
+          ),
         ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: playSound,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents:
-          matchDateTimeComponents ?? DateTimeComponents.dateAndTime,
-    );
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents:
+            matchDateTimeComponents ?? DateTimeComponents.dateAndTime,
+      );
+    } catch (e) {
+      debugPrint('Notification schedule error: $e');
+      throw Exception('Bildirim kurulamadı');
+    }
   }
 
   Future<void> scheduleIntervalNotifications({
@@ -160,7 +165,45 @@ class NotificationService {
   }
 
   Future<void> cancelNotification(int id) async {
-    await flutterLocalNotificationsPlugin.cancel(id);
+    try {
+      await flutterLocalNotificationsPlugin.cancel(id);
+    } catch (e) {
+      debugPrint('Notification cancel error: $e');
+    }
+  }
+
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    bool playSound = true,
+    bool enableVibration = true,
+  }) async {
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'task_channel_id',
+            'Task Reminders',
+            channelDescription: 'Notifications for task reminders',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: playSound,
+            enableVibration: enableVibration,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: playSound,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Notification show error: $e');
+    }
   }
 
   Future<void> cancelAllNotifications() async {

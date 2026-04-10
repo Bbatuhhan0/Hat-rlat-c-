@@ -77,6 +77,71 @@ class StatsPage extends StatelessWidget {
                 Consumer<TaskProvider>(
                   builder: (context, provider, _) {
                     final isDarkMode = provider.isDarkMode;
+                    final streak = provider.currentStreak;
+                    return GlassCard(
+                      isDarkMode: isDarkMode,
+                      padding: const EdgeInsets.all(2), // Thin border effect
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: streak > 0 
+                              ? LinearGradient(
+                                  colors: [
+                                    const Color(0xFF8E2DE2).withValues(alpha: 0.8),
+                                    const Color(0xFFFF512F).withValues(alpha: 0.8),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          child: Row(
+                            children: [
+                              Text(
+                                streak > 0 ? '🔥' : '⏳',
+                                style: const TextStyle(fontSize: 42),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      streak > 0 ? '$streak Günlük Seri!' : 'Serini Başlat!',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.5,
+                                        color: streak > 0 ? Colors.white : (isDarkMode ? Colors.white : Colors.black87),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      streak > 0 
+                                          ? 'Harika gidiyorsun, seriyi bozma!' 
+                                          : 'Bugün bir hedef tamamlayarak serini başlat!',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: streak > 0 ? Colors.white.withValues(alpha: 0.9) : (isDarkMode ? Colors.white70 : Colors.black54),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                Consumer<TaskProvider>(
+                  builder: (context, provider, _) {
+                    final isDarkMode = provider.isDarkMode;
                     return Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
