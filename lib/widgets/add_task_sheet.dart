@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:lottie/lottie.dart';
 import '../providers/task_provider.dart';
 import '../models/saved_location.dart';
 import '../models/task_model.dart';
@@ -901,12 +900,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         width: double.infinity,
                         alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Lottie.asset(
-                          'assets/animations/saving.json',
-                          width: 50,
-                          height: 50,
-                          repeat: false,
-                        ),
+                        child: CircularProgressIndicator(color: _selectedColor),
                       )
                     : ElevatedButton(
                         key: const ValueKey('btn'),
@@ -983,13 +977,6 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            if (_isSaving)
-                              Lottie.asset(
-                                'assets/animations/success.json',
-                                height: 30,
-                                repeat: false,
-                              ),
-                            if (!_isSaving)
                                Text(
                                 'Görevi Kaydet',
                                 style: TextStyle(

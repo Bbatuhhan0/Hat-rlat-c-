@@ -31,17 +31,10 @@ class _TaskItemState extends State<TaskItem> {
         : CupertinoColors.systemBlue;
 
     return AnimatedOpacity(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
       opacity: _isDeleting ? 0.0 : 1.0,
       curve: Curves.easeIn,
-      child: AnimatedSlide(
-        duration: const Duration(milliseconds: 400),
-        offset: _isDeleting ? const Offset(1.0, 0) : Offset.zero,
-        curve: Curves.easeInBack,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 400),
-          scale: _isDeleting ? 0.8 : 1.0,
-          child: GestureDetector(
+      child: GestureDetector(
             onTapDown: (_) => setState(() => _isPressed = true),
             onTapUp: (_) => setState(() => _isPressed = false),
             onTapCancel: () => setState(() => _isPressed = false),
@@ -581,8 +574,6 @@ class _TaskItemState extends State<TaskItem> {
                     ),        // 7: Container
                   ),         // 8: AnimatedScale
                 ),          // 9: GestureDetector
-              ),           // 10: AnimatedScale
-            ),            // 11: AnimatedSlide
-          );             // 12: AnimatedOpacity
+            );             // 12: AnimatedOpacity
   }
 }

@@ -232,8 +232,11 @@ class _HomePageState extends State<HomePage> {
                 child: Selector<TaskProvider, String>(
                   selector: (_, p) => p.selectedCategory,
                   builder: (context, selectedCategory, _) {
-                    return Row(
-                      children: ['Hepsi', 'Genel', 'Konum', 'Ayrılma Hatırlatıcısı'].map((category) {
+                      final baseCategories = ['Hepsi', 'Genel', 'Konum', 'Ayrılma Hatırlatıcısı'];
+                      final dynamicCategories = context.select<TaskProvider, List<String>>((p) => p.categories);
+                      final allCategories = [...baseCategories, ...dynamicCategories];
+                      return Row(
+                        children: allCategories.map((category) {
                         final isSelected = selectedCategory == category;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
@@ -267,9 +270,19 @@ class _HomePageState extends State<HomePage> {
         // Görev Listesi
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-          sliver: Selector<TaskProvider, List>(
-            selector: (_, p) => p.filteredTasks,
-            builder: (context, tasks, _) {
+          sliver: Consumer<TaskProvider>(
+            builder: (context, provider, _) {
+              if (provider.isLoading) {
+                return const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: CircularProgressIndicator(color: Color(0xFF8E2DE2)),
+                    ),
+                  ),
+                );
+              }
+              final tasks = provider.filteredTasks;
               if (tasks.isEmpty) {
                 return const SliverToBoxAdapter(child: _EmptyStateCard());
               }

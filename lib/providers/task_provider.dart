@@ -13,8 +13,19 @@ class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
   List<Task> get tasks => _tasks;
 
-  final List<String> _categories = [];
-  List<String> get categories => _categories;
+  // UI State
+  bool _isLoading = true;
+  bool get isLoading => _isLoading;
+
+  List<String> get categories {
+    final Set<String> cats = {};
+    for (var t in _tasks) {
+      if (t.category.trim().isNotEmpty && t.category != 'Hepsi' && t.category != 'Genel' && t.category != 'Konum' && t.category != 'Ayrılma Hatırlatıcısı') {
+        cats.add(t.category);
+      }
+    }
+    return cats.toList();
+  }
 
   // UI State
   DateTime _selectedDate = DateTime.now();
@@ -121,9 +132,17 @@ class TaskProvider with ChangeNotifier {
   }
 
   TaskProvider() {
-    _loadTasks();
-    _loadSettings();
-    _loadStreak();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await Future.wait([
+      _loadTasks(),
+      _loadSettings(),
+      _loadStreak(),
+    ]);
+    _isLoading = false;
+    notifyListeners();
   }
 
   // --- Location logic ---
@@ -283,10 +302,6 @@ class TaskProvider with ChangeNotifier {
       }
     }
 
-    if (!_categories.contains(category)) {
-      _categories.add(category);
-    }
-
     notifyListeners();
     await _saveTasks();
     _checkLocationTracking();
@@ -441,7 +456,8 @@ class TaskProvider with ChangeNotifier {
           NotificationService().cancelNotification(task.id.hashCode.abs());
           _calculateStreak();
         } else if (!allDone && wasCompleted) {
-          try {
+          if (!task.isLocationTask) {
+            try {
             final timeParts = task.time.split(':');
             if (timeParts.length == 2) {
               final int hour = int.parse(timeParts[0]);
@@ -466,8 +482,9 @@ class TaskProvider with ChangeNotifier {
                 );
               }
             }
-          } catch (e) {
-            debugPrint('Reschedule error: $e');
+            } catch (e) {
+              debugPrint('Reschedule error: $e');
+            }
           }
         }
 
@@ -529,8 +546,10 @@ class TaskProvider with ChangeNotifier {
         currentTasks = currentTasks.where((t) => t.isLocationTask && !t.isSafeExitTask).toList();
       } else if (_selectedCategory == 'Ayrılma Hatırlatıcısı') {
         currentTasks = currentTasks.where((t) => t.isSafeExitTask).toList();
+      } else if (_selectedCategory == 'Genel') {
+        currentTasks = currentTasks.where((t) => !t.isLocationTask && !t.isSafeExitTask && (t.category == 'Genel' || t.category.isEmpty)).toList();
       } else {
-        currentTasks = currentTasks.where((t) => t.category == _selectedCategory || (!t.isLocationTask && !t.isSafeExitTask && _selectedCategory == 'Genel')).toList();
+        currentTasks = currentTasks.where((t) => t.category == _selectedCategory).toList();
       }
     }
 
